@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FX Strat Analyst</title>
+    
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Specific Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FX Analyst">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2990/2990194.png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#10b981', 
+                        'secondary': '#1f2937', 
+                        'accent': '#f59e0b', 
+                        'bullish': '#059669', 
+                        'bearish': '#dc2626', 
+                        'neutral': '#6b7280', 
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        body {
+            background-color: #f3f4f6;
+            overscroll-behavior-y: none;
+            font-family: 'Inter', sans-serif;
+        }
+        .container-card {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            background-color: white;
+            padding: 1rem;
+        }
+        .trade-card {
+            transition: transform 0.15s ease-in-out;
+            border: 1px solid #e5e7eb;
+        }
+        .trade-card:active {
+            transform: scale(0.98);
+        }
+        .loader {
+            border-top-color: #f3f4f6;
+            border-left-color: #f3f4f6;
+            border-right-color: #f3f4f6;
+            border-bottom-color: #10b981;
+            border-width: 3px;
+            border-style: solid;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .chevron-icon {
+            transition: transform 0.3s ease;
+        }
+        .collapsed .chevron-icon {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-6 pb-24 min-h-screen">
+
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-secondary">FX Strat Analyst</h1>
+            <p class="text-sm text-gray-500 mt-1">Timeframe Continuity (FTFC) & Order Flow</p>
+        </header>
+
+        <!-- Configuration Panel -->
+        <div class="container-card mb-6">
+            <div class="flex justify-between items-center cursor-pointer border-b pb-2 mb-4" onclick="toggleSection('configContent', 'configChevron')">
+                <h2 class="text-lg font-bold text-secondary">Setup & Controls</h2>
+                <i id="configChevron" data-lucide="chevron-up" class="w-5 h-5 text-gray-500 chevron-icon"></i>
+            </div>
+
+            <div id="configContent" class="transition-all duration-300">
+                <!-- Timeframe Setup -->
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">1. Macro</label>
+                        <select id="tfMacro" class="w-full p-2 text-sm border rounded bg-gray-50">
+                            <option value="Monthly">Monthly</option>
+                            <option value="Weekly" selected>Weekly</option>
+                            <option value="Daily">Daily</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">2. Structure</label>
+                        <select id="tfIntermediate" class="w-full p-2 text-sm border rounded bg-gray-50">
+                            <option value="Daily" selected>Daily</option>
+                            <option value="H4">4-Hour</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">3. Action</label>
+                        <select id="tfExecution" class="w-full p-2 text-sm border rounded bg-gray-50">
+                            <option value="H1" selected>1-Hour</option>
+                            <option value="M15">15-Min</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Risk & Keys -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-600 mb-1">Account $</label>
+                            <input type="number" id="accountSize" value="10000" class="w-full p-2 text-sm border rounded">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-600 mb-1">Risk %</label>
+                            <input type="number" id="riskPct" value="1.0" step="0.1" class="w-full p-2 text-sm border rounded">
+                        </div>
+                    </div>
+                    <div>
+                         <label class="block text-xs font-bold text-gray-600 mb-1">Gemini API Key</label>
+                         <div class="flex gap-2">
+                            <input type="password" id="apiKey" placeholder="Required" class="flex-grow p-2 text-sm border rounded">
+                             <button onclick="document.getElementById('apiKey').value=''" class="px-3 bg-gray-200 rounded text-xs font-bold">Clr</button>
+                         </div>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button id="runAnalysisButton" onclick="runBatchAnalysis()" class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md flex justify-center items-center active:bg-blue-700 transition-colors">
+                    <span id="buttonText">Run Strat Scan (10 Pairs)</span>
+                    <div id="loader" class="loader ml-2 hidden"></div>
+                </button>
+                
+                <p class="text-[10px] text-gray-400 mt-2 text-center">Scans for FTFC Alignment & Inside Bar Conflicts.</p>
+            </div>
+        </div>
+
+        <!-- Results Area -->
+        <div id="resultsArea" class="space-y-4">
+            <!-- Cards injected here -->
+        </div>
+        
+        <!-- History (Collapsible) -->
+        <div class="container-card mt-8">
+            <div class="flex justify-between items-center cursor-pointer border-b pb-2 mb-2" onclick="toggleSection('historyContent', 'historyChevron')">
+                <h2 class="text-lg font-bold text-secondary">Trade History</h2>
+                <i id="historyChevron" data-lucide="chevron-down" class="w-5 h-5 text-gray-500 chevron-icon collapsed"></i>
+            </div>
+            
+            <div id="historyContent" class="hidden transition-all duration-300">
+                <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+                    <div class="bg-green-50 p-2 rounded"><div class="text-xs text-gray-500">Wins</div><div id="statWins" class="font-bold text-green-600">0</div></div>
+                    <div class="bg-red-50 p-2 rounded"><div class="text-xs text-gray-500">Losses</div><div id="statLosses" class="font-bold text-red-600">0</div></div>
+                    <div class="bg-blue-50 p-2 rounded"><div class="text-xs text-gray-500">Win Rate</div><div id="statRate" class="font-bold text-blue-600">0%</div></div>
+                </div>
+                <div id="historyList" class="space-y-2 max-h-60 overflow-y-auto">
+                    <p class="text-center text-xs text-gray-400 py-2">No trades tracked yet.</p>
+                </div>
+                <button onclick="clearHistory()" class="w-full mt-2 py-2 text-xs text-red-500 font-bold border border-red-200 rounded hover:bg-red-50">Reset History</button>
+            </div>
+        </div>
+
+        <!-- Error Toast -->
+        <div id="errorMessage" class="fixed bottom-4 left-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-lg hidden z-50">
+            <p class="font-bold">Error</p>
+            <p id="errorText" class="text-sm"></p>
+            <button onclick="this.parentElement.classList.add('hidden')" class="absolute top-2 right-2 text-red-500">✕</button>
+        </div>
+
+    </div>
+
+    <!-- Load Icons -->
+    <script type="module">
+        import { createIcons, Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, AlertTriangle, CheckCircle } from 'https://unpkg.com/lucide@latest/dist/esm/lucide.js';
+        window.lucideIcons = { Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, AlertTriangle, CheckCircle };
+        window.initIcons = () => createIcons({ icons: window.lucideIcons });
+        window.initIcons();
+    </script>
+
+    <script>
+        // --- CONFIG ---
+        const API_MODEL = 'gemini-2.5-flash-preview-09-2025';
+        const CURRENCY_API_KEY = "ff68c01ec6288c11786e898adad0b5e8f766"; 
+        const HISTORY_KEY = 'fx_strat_history_v1';
+
+        const PAIRS = [
+            { id: 'EUR/USD', base: 1.0850, p: 4 }, { id: 'USD/JPY', base: 150.50, p: 2 },
+            { id: 'GBP/USD', base: 1.2580, p: 4 }, { id: 'AUD/USD', base: 0.6500, p: 4 },
+            { id: 'NZD/USD', base: 0.6050, p: 4 }, { id: 'EUR/JPY', base: 163.35, p: 2 },
+            { id: 'GBP/JPY', base: 189.30, p: 2 }, { id: 'USD/CAD', base: 1.3700, p: 4 },
+            { id: 'USD/CHF', base: 0.9050, p: 4 }, { id: 'XAU/USD', base: 2350.00, p: 2 }
+        ];
+
+        let tradeHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+
+        // --- UI HELPERS ---
+        const el = (id) => document.getElementById(id);
+        
+        window.toggleSection = (contentId, iconId) => {
+            const content = el(contentId);
+            const icon = el(iconId);
+            content.classList.toggle('hidden');
+            icon.parentElement.classList.toggle('collapsed');
+        };
+
+        function showError(msg) {
+            el('errorText').textContent = msg;
+            el('errorMessage').classList.remove('hidden');
+            setTimeout(() => el('errorMessage').classList.add('hidden'), 5000);
+        }
+
+        function updateLoader(active, text) {
+            el('runAnalysisButton').disabled = active;
+            el('loader').classList.toggle('hidden', !active);
+            if(text) el('buttonText').textContent = text;
+        }
+
+        // --- LOGIC: The Strat & Risk ---
+        
+        // Generate the strict prompt for Gemini
+        function buildPrompt(pair, price, precision, tfM, tfS, tfE) {
+            return {
+                contents: [{
+                    parts: [{
+                        text: `You are an expert FX trader using "The Strat" (FTFC).
+                        
+                        **TASK:** Analyze ${pair} (Current Price: ${price}).
+                        
+                        **RULES (STRICT):**
+                        1. Find Real-Time Open Prices for Current ${tfM}, ${tfS}, and ${tfE} candles via Google Search.
+                        2. **Continuity:** If ALL 3 candles are Green (Close > Open) -> BULLISH. If ALL 3 Red -> BEARISH. Else -> NEUTRAL.
+                        3. **Inside Bar:** If ${tfM} or ${tfS} is an Inside Bar -> NEUTRAL (Consolidation).
+                        4. **Output:** Only valid JSON.
+
+                        **JSON FORMAT:**
+                        {
+                            "signal": "LONG" | "SHORT" | "NEUTRAL",
+                            "conviction": "85%", 
+                            "continuity": { "M": "Bullish", "W": "Bearish", "D": "Bullish" },
+                            "rationale": "Detailed reason...",
+                            "entry": "1.2345", "stop": "1.2300", "target": "1.2450"
+                        }
+                        Ensure prices have ${precision} decimals.`
+                    }]
+                }],
+                tools: [{ google_search: {} }]
+            };
+        }
+
+        // Mock Quote Fetch (Replace with real API call in production if quota allows)
+        async function getQuote(pair) {
+            // In a real PWA, you'd use fetch() to CurrencyAPI here. 
+            // For stability in this demo, we mock based on base price + jitter.
+            const def = PAIRS.find(p => p.id === pair);
+            const jitter = (Math.random() * 0.002) - 0.001;
+            const price = def.base + (def.id.includes('JPY') || def.id.includes('XAU') ? jitter * 100 : jitter);
+            return { pair, price: price.toFixed(def.p), precision: def.p };
+        }
+
+        // Calculate Risk
+        function calcRisk(entry, stop, precision, account, riskPct) {
+            const entryVal = parseFloat(entry);
+            const stopVal = parseFloat(stop);
+            if (!entryVal || !stopVal) return { lots: 0, risk: 0, rr: 0 };
+
+            const pips = Math.abs(entryVal - stopVal) * (precision === 2 ? 100 : 10000);
+            const riskAmt = account * (riskPct / 100);
+            
+            // Approx pip value (standard lot)
+            let pipVal = 10; 
+            if (precision === 2) pipVal = 7.5; // JPY/Gold approx
+
+            const lots = pips > 0 ? (riskAmt / pips) / pipVal : 0;
+            return { 
+                lots: Math.max(0.01, parseFloat(lots.toFixed(2))), 
+                risk: riskAmt.toFixed(2),
+                pips: pips.toFixed(1)
+            };
+        }
+
+        // --- MAIN EXECUTION ---
+
+        async function runBatchAnalysis() {
+            const key = el('apiKey').value.trim();
+            if (!key) return showError("API Key Required");
+
+            const tfM = el('tfMacro').value;
+            const tfS = el('tfIntermediate').value;
+            const tfE = el('tfExecution').value;
+            const acc = parseFloat(el('accountSize').value);
+            const risk = parseFloat(el('riskPct').value);
+
+            updateLoader(true, "Scanning Market...");
+            el('resultsArea').innerHTML = ''; // Clear previous
+
+            // Sequential execution to avoid rate limits
+            for (const p of PAIRS) {
+                updateLoader(true, `Analyzing ${p.id}...`);
+                
+                try {
+                    // 1. Get Price
+                    const quote = await getQuote(p.id);
+                    
+                    // 2. Call Gemini
+                    const payload = buildPrompt(p.id, quote.price, p.p, tfM, tfS, tfE);
+                    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${API_MODEL}:generateContent?key=${key}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    
+                    const data = await resp.json();
+                    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    
+                    if (!text) throw new Error("No AI response");
+                    
+                    // Clean JSON
+                    const cleanJson = text.replace(/```json|```/g, '').trim();
+                    const analysis = JSON.parse(cleanJson.substring(cleanJson.indexOf('{'), cleanJson.lastIndexOf('}') + 1));
+
+                    // 3. Calculate Risk
+                    const rCalc = calcRisk(analysis.entry, analysis.stop, p.p, acc, risk);
+
+                    // 4. Render Card
+                    renderCard(p.id, quote.price, analysis, rCalc);
+
+                } catch (e) {
+                    console.error(p.id, e);
+                    renderErrorCard(p.id, e.message);
+                }
+            }
+
+            updateLoader(false, "Run Strat Scan");
+            window.initIcons();
+        }
+
+        // --- RENDERING ---
+
+        function renderCard(pair, price, data, risk) {
+            const isLong = data.signal === 'LONG';
+            const isShort = data.signal === 'SHORT';
+            const isNeutral = !isLong && !isShort;
+            
+            let borderClass = 'border-gray-300';
+            let bgClass = 'bg-white';
+            let textClass = 'text-gray-600';
+            let icon = 'minus-circle';
+
+            if (isLong) { 
+                borderClass = 'border-green-500'; 
+                textClass = 'text-green-600'; 
+                icon = 'trending-up';
+            }
+            if (isShort) { 
+                borderClass = 'border-red-500'; 
+                textClass = 'text-red-600'; 
+                icon = 'trending-down';
+            }
+
+            const html = `
+                <div class="container-card ${borderClass} border-l-4 mb-4 trade-card">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800">${pair}</h3>
+                            <p class="text-xs font-mono text-gray-500">${price}</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center gap-1 ${textClass} font-bold text-lg">
+                                <i data-lucide="${icon}" class="w-5 h-5"></i>
+                                ${data.signal}
+                            </div>
+                            <div class="text-xs text-gray-400 font-mono">Conviction: ${data.conviction || 'N/A'}</div>
+                        </div>
+                    </div>
+
+                    ${!isNeutral ? `
+                    <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+                        <div class="bg-gray-50 p-2 rounded">
+                            <span class="block text-[10px] text-gray-500 uppercase">Entry</span>
+                            <span class="font-mono font-bold text-blue-600">${data.entry}</span>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded">
+                            <span class="block text-[10px] text-gray-500 uppercase">Stop</span>
+                            <span class="font-mono font-bold text-red-500">${data.stop}</span>
+                        </div>
+                        <div class="bg-gray-50 p-2 rounded">
+                            <span class="block text-[10px] text-gray-500 uppercase">Target</span>
+                            <span class="font-mono font-bold text-green-500">${data.target}</span>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center bg-gray-50 p-2 rounded mb-3 text-xs">
+                        <span>Lots: <strong>${risk.lots}</strong></span>
+                        <span>Risk: <strong>$${risk.risk}</strong></span>
+                        <span>Dist: <strong>${risk.pips} pips</strong></span>
+                    </div>
+                    ` : ''}
+
+                    <div class="text-sm text-gray-600 italic border-t pt-2 mt-2">
+                        ${data.rationale}
+                    </div>
+                    
+                    <!-- Continuity Badges -->
+                    <div class="flex gap-2 mt-3 justify-center">
+                        ${Object.entries(data.continuity || {}).map(([tf, state]) => 
+                            `<span class="px-2 py-1 rounded text-[10px] font-bold ${state.includes('Bull') ? 'bg-green-100 text-green-700' : state.includes('Bear') ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}">${tf}</span>`
+                        ).join('')}
+                    </div>
+
+                    ${!isNeutral ? `
+                    <button onclick="trackTrade('${pair}', '${data.signal}', '${data.entry}', '${data.stop}', '${data.target}')" class="w-full mt-3 py-2 bg-secondary text-white rounded-lg text-sm font-semibold hover:bg-black transition">
+                        Track This Trade
+                    </button>
+                    ` : ''}
+                </div>
+            `;
+
+            el('resultsArea').insertAdjacentHTML('beforeend', html);
+        }
+
+        function renderErrorCard(pair, msg) {
+            const html = `
+                <div class="container-card border-l-4 border-red-300 mb-4 bg-red-50">
+                    <h3 class="font-bold text-red-800">${pair} - Failed</h3>
+                    <p class="text-xs text-red-600">${msg}</p>
+                </div>
+            `;
+            el('resultsArea').insertAdjacentHTML('beforeend', html);
+        }
+
+        // --- HISTORY LOGIC ---
+        
+        window.trackTrade = (pair, action, entry, sl, tp) => {
+            const trade = { id: Date.now(), pair, action, entry, sl, tp, result: 'OPEN' };
+            tradeHistory.unshift(trade);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(tradeHistory));
+            renderHistory();
+        };
+
+        window.updateTrade = (id, result) => {
+            const t = tradeHistory.find(x => x.id === id);
+            if(t) { t.result = result; localStorage.setItem(HISTORY_KEY, JSON.stringify(tradeHistory)); renderHistory(); }
+        };
+
+        window.clearHistory = () => {
+            if(confirm("Delete all history?")) {
+                tradeHistory = [];
+                localStorage.setItem(HISTORY_KEY, '[]');
+                renderHistory();
+            }
+        };
+
+        function renderHistory() {
+            const list = el('historyList');
+            list.innerHTML = '';
+            
+            let w=0, l=0;
+
+            tradeHistory.forEach(t => {
+                if (t.result === 'WIN') w++;
+                if (t.result === 'LOSS') l++;
+
+                const div = document.createElement('div');
+                div.className = 'flex justify-between items-center p-3 bg-white border rounded shadow-sm text-sm';
+                div.innerHTML = `
+                    <div>
+                        <span class="font-bold ${t.action === 'LONG' ? 'text-green-600' : 'text-red-600'}">${t.action} ${t.pair}</span>
+                        <span class="text-xs text-gray-400 ml-2">@ ${t.entry}</span>
+                    </div>
+                    <div class="flex gap-1">
+                        ${t.result === 'OPEN' ? `
+                            <button onclick="updateTrade(${t.id}, 'WIN')" class="px-2 py-1 bg-green-100 text-green-700 rounded hover:bg-green-200 text-xs">Win</button>
+                            <button onclick="updateTrade(${t.id}, 'LOSS')" class="px-2 py-1 bg-red-100 text-red-700 rounded hover:bg-red-200 text-xs">Loss</button>
+                        ` : `
+                            <span class="px-2 py-1 font-bold rounded text-xs ${t.result === 'WIN' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${t.result}</span>
+                        `}
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+
+            el('statWins').textContent = w;
+            el('statLosses').textContent = l;
+            const total = w + l;
+            el('statRate').textContent = total > 0 ? Math.round((w/total)*100) + '%' : '0%';
+        }
+
+        // --- STARTUP ---
+        renderHistory();
+    </script>
+</body>
+</html>
