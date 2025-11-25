@@ -2,22 +2,31 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FX Strat Analyst - Timeframe Continuity</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FX Strat Analyst</title>
+    
+    <!-- PWA Manifest Link -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Specific Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FX Analyst">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2990/2990194.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js CDN for rendering graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        'primary': '#10b981', // Emerald 500
-                        'secondary': '#1f2937', // Gray 800
-                        'accent': '#f59e0b', // Amber 500
-                        'bullish': '#059669', // Emerald 600
-                        'bearish': '#dc2626', // Red 600
-                        'neutral': '#f59e0b', // Amber 500
+                        'primary': '#10b981', 
+                        'secondary': '#1f2937', 
+                        'accent': '#f59e0b', 
+                        'bullish': '#059669', 
+                        'bearish': '#dc2626', 
+                        'neutral': '#6b7280', 
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -30,50 +39,39 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         
         body {
-            background-color: #f3f4f6; /* Gray 100 */
+            background-color: #f3f4f6;
+            overscroll-behavior-y: none;
+            font-family: 'Inter', sans-serif;
         }
         .container-card {
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             border-radius: 12px;
             background-color: white;
-            padding: 1.5rem;
+            padding: 1rem;
         }
         .trade-card {
             transition: transform 0.15s ease-in-out;
-            border: 2px solid #e5e7eb;
+            border: 1px solid #e5e7eb;
         }
-        .trade-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 10px -2px rgba(0, 0, 0, 0.1);
+        .trade-card:active {
+            transform: scale(0.98);
         }
-        .button-primary {
-            transition: all 0.15s ease-in-out;
-        }
-        .button-primary:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
-        }
-        /* Custom loader spinner */
         .loader {
             border-top-color: #f3f4f6;
             border-left-color: #f3f4f6;
             border-right-color: #f3f4f6;
             border-bottom-color: #10b981;
-            border-width: 4px;
+            border-width: 3px;
             border-style: solid;
             border-radius: 50%;
-            width: 24px;
-            height: 24px;
+            width: 20px;
+            height: 20px;
             animation: spin 1s linear infinite;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        .history-item:hover {
-            background-color: #f9fafb; /* Gray 50 */
-        }
-        /* Transition for the chevron rotation */
         .chevron-icon {
             transition: transform 0.3s ease;
         }
@@ -82,268 +80,165 @@
         }
     </style>
 </head>
-<body class="p-4 md:p-8 font-sans min-h-screen">
+<body class="p-4 md:p-6 pb-24 min-h-screen">
 
-    <div class="max-w-7xl mx-auto">
-        <header class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-secondary">FX Strat AI (Timeframe Continuity)</h1>
-            <p class="text-lg text-gray-500 mt-2">Powered by **Full Timeframe Continuity (FTFC)**. Trades M/W/D Alignment.</p>
+    <div class="max-w-4xl mx-auto">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-secondary">FX Strat Analyst</h1>
+            <p class="text-sm text-gray-500 mt-1">Timeframe Continuity (FTFC) & Order Flow</p>
         </header>
 
-        <!-- Configuration & Control Panel -->
-        <div class="container-card mb-8">
-            <h2 class="text-xl font-semibold text-secondary mb-4 border-b pb-2">Continuity Setup (The Strat)</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Configuration Panel -->
+        <div class="container-card mb-6">
+            <div class="flex justify-between items-center cursor-pointer border-b pb-2 mb-4" onclick="toggleSection('configContent', 'configChevron')">
+                <h2 class="text-lg font-bold text-secondary">Setup & Controls</h2>
+                <i id="configChevron" data-lucide="chevron-up" class="w-5 h-5 text-gray-500 chevron-icon"></i>
+            </div>
+
+            <div id="configContent" class="transition-all duration-300">
                 
-                <!-- Asset Pair Input -->
-                <div class="md:col-span-1">
-                    <label for="assetPair" class="block text-sm font-medium text-gray-700 mb-1">Add Custom Asset</label>
-                    <input type="text" id="assetPair" placeholder="e.g. BTC/USD" class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary uppercase">
-                    <p class="text-[10px] text-gray-500 mt-1">Leave blank to run standard list. Type a pair to add it.</p>
+                <!-- Custom Asset Input -->
+                <div class="mb-4">
+                    <label for="assetPair" class="block text-xs font-bold text-gray-600 mb-1">Add Custom Asset</label>
+                    <input type="text" id="assetPair" placeholder="e.g. BTC/USD (Optional)" class="w-full p-2 text-sm border rounded uppercase bg-gray-50 focus:bg-white focus:ring-2 focus:ring-primary focus:outline-none">
                 </div>
 
-                <!-- Macro Filter (Trend) -->
-                <div>
-                    <label for="tfMacro" class="block text-sm font-medium text-gray-700 mb-1">1. Macro (Continuity)</label>
-                    <select id="tfMacro" class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                        <option value="Monthly">Monthly (M)</option>
-                        <option value="Weekly" selected>Weekly (W)</option>
-                        <option value="Daily">Daily (D)</option>
-                    </select>
+                <!-- Timeframe Setup -->
+                <div class="grid grid-cols-3 gap-3 mb-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">1. Macro</label>
+                        <select id="tfMacro" class="w-full p-2 text-sm border rounded bg-gray-50">
+                            <option value="Monthly">Monthly</option>
+                            <option value="Weekly" selected>Weekly</option>
+                            <option value="Daily">Daily</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">2. Structure</label>
+                        <select id="tfIntermediate" class="w-full p-2 text-sm border rounded bg-gray-50">
+                            <option value="Daily" selected>Daily</option>
+                            <option value="H4">4-Hour</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-600 mb-1">3. Action</label>
+                        <select id="tfExecution" class="w-full p-2 text-sm border rounded bg-gray-50">
+                            <option value="H1" selected>1-Hour</option>
+                            <option value="M15">15-Min</option>
+                        </select>
+                    </div>
                 </div>
 
-                <!-- Intermediate Filter (Structure) -->
-                <div>
-                    <label for="tfIntermediate" class="block text-sm font-medium text-gray-700 mb-1">2. Structure (Trend)</label>
-                    <select id="tfIntermediate" class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                        <option value="Daily">Daily (D)</option>
-                        <option value="H4" selected>4-Hour (H4)</option>
-                        <option value="H1">1-Hour (H1)</option>
-                    </select>
+                <!-- Risk & Keys -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    <div class="flex gap-3">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-600 mb-1">Account $</label>
+                            <input type="number" id="accountSize" value="10000" class="w-full p-2 text-sm border rounded">
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-gray-600 mb-1">Risk %</label>
+                            <input type="number" id="riskPct" value="1.0" step="0.1" class="w-full p-2 text-sm border rounded">
+                        </div>
+                    </div>
+                    <div>
+                         <label class="block text-xs font-bold text-gray-600 mb-1">Gemini API Key</label>
+                         <div class="flex gap-2">
+                            <input type="password" id="apiKey" placeholder="Required" class="flex-grow p-2 text-sm border rounded">
+                             <button onclick="document.getElementById('apiKey').value=''" class="px-3 bg-gray-200 rounded text-xs font-bold">Clr</button>
+                         </div>
+                    </div>
                 </div>
 
-                <!-- Execution Timeframe (Entry) -->
-                <div>
-                    <label for="tfExecution" class="block text-sm font-medium text-gray-700 mb-1">3. Execution (Action)</label>
-                    <select id="tfExecution" class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                        <option value="H1">1-Hour (H1)</option>
-                        <option value="M30">30-Min (M30)</option>
-                        <option value="M15" selected>15-Min (M15)</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- API Key Input -->
-            <div class="mt-4">
-                <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-1">Gemini API Key</label>
-                <div class="flex space-x-2">
-                    <input type="password" id="apiKey" value="" placeholder="Enter your key (Required)" class="flex-grow p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                    <button id="clearKey" onclick="document.getElementById('apiKey').value = '';" class="px-4 py-2 bg-gray-500 text-white font-semibold rounded-lg text-sm hover:bg-gray-600 transition duration-150">Clear</button>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                 <!-- Account Size Input -->
-                <div>
-                    <label for="accountSize" class="block text-sm font-medium text-gray-700 mb-1">Account Size ($, USD)</label>
-                    <input type="number" id="accountSize" value="10000" min="1000" class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                </div>
-
-                <!-- Risk Percentage Input -->
-                <div>
-                    <label for="riskPct" class="block text-sm font-medium text-gray-700 mb-1">Risk per Trade (%)</label>
-                    <input type="number" id="riskPct" value="1" min="0.1" max="10" step="0.1" class="w-full p-2 border border-gray-300 rounded-md focus:ring-primary focus:border-primary">
-                </div>
-            </div>
-
-            <!-- Run Button -->
-            <div class="mt-6">
-                <button id="runAnalysisButton" onclick="runBatchAnalysis()" class="w-full flex justify-center items-center px-6 py-3 bg-primary text-white font-bold text-lg rounded-lg shadow-md button-primary disabled:opacity-50 h-full">
-                    <span id="buttonText">Run Full Continuity Scan</span>
-                    <div id="loader" class="loader ml-3 hidden"></div>
+                <!-- Action Button -->
+                <button id="runAnalysisButton" onclick="runBatchAnalysis()" class="w-full py-3 bg-blue-600 text-white font-bold rounded-lg shadow-md flex justify-center items-center active:bg-blue-700 transition-colors">
+                    <span id="buttonText">Run Strat Scan</span>
+                    <div id="loader" class="loader ml-2 hidden"></div>
                 </button>
-                <p class="text-xs text-gray-500 mt-1 text-center">The AI checks for Full Timeframe Continuity (FTFC) and Inside Bar conflicts before signaling.</p>
+                
+                <p class="text-[10px] text-gray-400 mt-2 text-center">Scans for FTFC Alignment & Inside Bar Conflicts.</p>
             </div>
         </div>
+
+        <!-- Results Area -->
+        <div id="resultsArea" class="space-y-4">
+            <!-- Cards injected here -->
+        </div>
         
-        <!-- Results Card -->
-        <div id="resultsCard" class="container-card mb-6 hidden">
-            <h2 class="text-2xl font-bold text-secondary mb-4 border-b pb-2">Continuity Report for <span id="reportPair" class="text-primary"></span></h2>
+        <!-- History (Collapsible) -->
+        <div class="container-card mt-8">
+            <div class="flex justify-between items-center cursor-pointer border-b pb-2 mb-2" onclick="toggleSection('historyContent', 'historyChevron')">
+                <h2 class="text-lg font-bold text-secondary">Trade History</h2>
+                <i id="historyChevron" data-lucide="chevron-down" class="w-5 h-5 text-gray-500 chevron-icon collapsed"></i>
+            </div>
             
-            <!-- Continuity Scorecard -->
-            <div id="scorecard" class="grid grid-cols-3 gap-4 mb-6">
-                <!-- Data will be injected here -->
-            </div>
-
-            <!-- Signal Output -->
-            <div id="signalOutput" class="p-4 rounded-lg border-2">
-                <p class="text-lg font-bold mb-2 flex items-center">Signal Status: <span id="signalStatus" class="ml-2 font-extrabold text-2xl"></span></p>
-                <p id="signalRationale" class="text-gray-700 italic border-t pt-2"></p>
-            </div>
-
-            <!-- Strat Analysis Details -->
-            <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h3 class="font-semibold text-blue-800 mb-2">Strat Pattern Check</h3>
-                    <p id="stratAnalysis" class="text-sm text-blue-900"></p>
+            <div id="historyContent" class="hidden transition-all duration-300">
+                <div class="grid grid-cols-3 gap-2 mb-3 text-center">
+                    <div class="bg-green-50 p-2 rounded"><div class="text-xs text-gray-500">Wins</div><div id="statWins" class="font-bold text-green-600">0</div></div>
+                    <div class="bg-red-50 p-2 rounded"><div class="text-xs text-gray-500">Losses</div><div id="statLosses" class="font-bold text-red-600">0</div></div>
+                    <div class="bg-blue-50 p-2 rounded"><div class="text-xs text-gray-500">Win Rate</div><div id="statRate" class="font-bold text-blue-600">0%</div></div>
                 </div>
-                 <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                    <h3 class="font-semibold text-purple-800 mb-2">Detailed Execution Plan</h3>
-                    <p id="executionPlan" class="text-sm text-purple-900"></p>
+                <div id="historyList" class="space-y-2 max-h-60 overflow-y-auto">
+                    <p class="text-center text-xs text-gray-400 py-2">No trades tracked yet.</p>
                 </div>
-            </div>
-
-            <!-- Grounding Sources -->
-            <div class="border-t pt-2 mt-4 space-y-0.5">
-                <h5 class="text-[10px] font-bold text-gray-500">Grounded Fundamental Sources:</h5>
-                <div id="citationSources"></div>
+                <button onclick="clearHistory()" class="w-full mt-2 py-2 text-xs text-red-500 font-bold border border-red-200 rounded hover:bg-red-50">Reset History</button>
             </div>
         </div>
 
-        <!-- All Trade Signals Container (Batch Results) -->
-        <div class="container-card mb-6">
-            <!-- Toggle Header -->
-            <div class="flex justify-between items-center cursor-pointer mb-4 border-b pb-2" onclick="toggleSection('allTradeSignalsContainer', 'signalsChevron')">
-                <h2 class="text-2xl font-bold text-secondary select-none">Strategic Trade Signals</h2>
-                <i id="signalsChevron" data-lucide="chevron-up" class="w-6 h-6 text-gray-500 chevron-icon"></i>
-            </div>
-            <!-- Collapsible Content -->
-            <div id="allTradeSignalsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 transition-all duration-300">
-                <!-- Trade cards will be injected here -->
-                <p id="initialMessage" class="text-gray-500 col-span-full">Results will be displayed here in a grid after running the analysis.</p>
-            </div>
-        </div>
-        
-        <!-- NEW: Trade History & Performance Dashboard -->
-        <div class="container-card mb-6">
-            <!-- Toggle Header -->
-            <div class="flex justify-between items-center cursor-pointer mb-4 border-b pb-2" onclick="toggleSection('historyContent', 'historyChevron')">
-                <div class="flex items-center space-x-4">
-                    <h2 class="text-2xl font-bold text-secondary select-none">Trade History & Performance</h2>
-                    <button onclick="clearHistory(event)" class="px-3 py-1 text-xs font-semibold text-red-600 border border-red-300 rounded hover:bg-red-50">Clear History</button>
-                </div>
-                <i id="historyChevron" data-lucide="chevron-up" class="w-6 h-6 text-gray-500 chevron-icon"></i>
-            </div>
-
-            <!-- Collapsible Content -->
-            <div id="historyContent" class="transition-all duration-300">
-                <!-- Performance Summary -->
-                <div class="grid grid-cols-3 gap-4 mb-4">
-                    <div class="p-4 bg-green-100 rounded-lg text-center">
-                        <span class="block text-sm font-medium text-green-700">Total Wins</span>
-                        <span id="summary-wins" class="text-3xl font-bold text-green-600">0</span>
-                    </div>
-                    <div class="p-4 bg-red-100 rounded-lg text-center">
-                        <span class="block text-sm font-medium text-red-700">Total Losses</span>
-                        <span id="summary-losses" class="text-3xl font-bold text-red-600">0</span>
-                    </div>
-                    <div class="p-4 bg-blue-100 rounded-lg text-center">
-                        <span class="block text-sm font-medium text-blue-700">Weekly Accuracy</span>
-                        <span id="summary-accuracy" class="text-3xl font-bold text-blue-600">0%</span>
-                    </div>
-                </div>
-
-                <!-- History List Container -->
-                <div id="trade-history-container" class="space-y-3">
-                    <p id="history-placeholder" class="text-gray-500 text-center py-4">Tracked trades will appear here. Save signals from the panel above to begin backtesting.</p>
-                    <!-- History items will be injected here -->
-                </div>
-            </div>
+        <!-- Error Toast -->
+        <div id="errorMessage" class="fixed bottom-4 left-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-lg hidden z-50">
+            <p class="font-bold">Error</p>
+            <p id="errorText" class="text-sm"></p>
+            <button onclick="this.parentElement.classList.add('hidden')" class="absolute top-2 right-2 text-red-500">✕</button>
         </div>
 
-        <!-- Batch Run Log (Renamed from Analysis History Log) -->
-        <div class="container-card mt-6">
-            <h2 class="text-xl font-semibold text-secondary mb-3 border-b pb-2">Batch Run Log</h2>
-            <div id="historyLog" class="h-48 overflow-y-auto bg-gray-50 p-3 rounded-lg text-sm font-mono space-y-2">
-                <p class="text-gray-500" id="historyInitialMessage">Each full batch of 10 signals will be logged here for review.</p>
-            </div>
-        </div>
-
-        <!-- Error Message Box -->
-        <div id="errorMessage" class="hidden mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg" role="alert">
-            <p class="font-bold">Batch Analysis Error:</p>
-            <p id="errorText"></p>
-        </div>
     </div>
 
+    <!-- Load Icons -->
     <script type="module">
-        import { createIcons, Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown } from 'https://unpkg.com/lucide@latest/dist/esm/lucide.js';
-        
-        // Assemble the icons object from the imports
-        const iconSet = {
-            Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown
-        };
-
-        // Define the globally exposed createIcons function
-        window.lucide = { 
-            createIcons: () => {
-                createIcons({ icons: iconSet, attrs: { width: 24, height: 24 } });
-            }
-        };
-        
-        window.lucide.createIcons();
+        import { createIcons, Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, AlertTriangle, CheckCircle } from 'https://unpkg.com/lucide@latest/dist/esm/lucide.js';
+        window.lucideIcons = { Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, AlertTriangle, CheckCircle };
+        window.initIcons = () => createIcons({ icons: window.lucideIcons });
+        window.initIcons();
     </script>
 
     <script>
+        // PWA Service Worker Registration
+        // Only register if on HTTP/HTTPS to prevent preview blob error
+        if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.protocol === 'http:')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('Service Worker registered'))
+                    .catch(err => console.log('Service Worker failed:', err));
+            });
+        }
+
         const API_MODEL = 'gemini-2.5-flash-preview-09-2025';
-        let userApiKey = ""; // Store the key globally
-
-        // --- NEW: localStorage and State ---
-        const TRADE_HISTORY_KEY = 'fxAnalystTradeHistory';
-        let tradeHistory = []; // In-memory array for tracked trades
-
-        // --- Currency Pair Definitions (10 Pairs including XAUUSD) ---
+        let userApiKey = ""; 
+        const TRADE_HISTORY_KEY = 'fx_strat_history_v1';
+        let tradeHistory = []; 
         const ALL_PAIRS = [
-            { pair: 'EUR/USD', base: 1.0850, precision: 4 },
-            { pair: 'USD/JPY', base: 150.50, precision: 2 },
-            { pair: 'GBP/USD', base: 1.2580, precision: 4 },
-            { pair: 'AUD/USD', base: 0.6500, precision: 4 },
-            { pair: 'NZD/USD', base: 0.6050, precision: 4 },
-            { pair: 'EUR/JPY', base: 163.35, precision: 2 },
-            { pair: 'GBP/JPY', base: 189.30, precision: 2 },
-            { pair: 'USD/CAD', base: 1.3700, precision: 4 },
-            { pair: 'USD/CHF', base: 0.9050, precision: 4 },
-            { pair: 'XAU/USD', base: 2350.00, precision: 2 },
+            { pair: 'EUR/USD', base: 1.0850, precision: 4 }, { pair: 'USD/JPY', base: 150.50, precision: 2 },
+            { pair: 'GBP/USD', base: 1.2580, precision: 4 }, { pair: 'AUD/USD', base: 0.6500, precision: 4 },
+            { pair: 'NZD/USD', base: 0.6050, precision: 4 }, { pair: 'EUR/JPY', base: 163.35, precision: 2 },
+            { pair: 'GBP/JPY', base: 189.30, precision: 2 }, { pair: 'USD/CAD', base: 1.3700, precision: 4 },
+            { pair: 'USD/CHF', base: 0.9050, precision: 4 }, { pair: 'XAU/USD', base: 2350.00, precision: 2 },
         ];
-
-        // Note: Using provided CurrencyAPI.net key
         const currencyApiKey = "ff68c01ec6288c11786e898adad0b5e8f766";
 
-        // --- DOM Elements ---
-        const apiKeyInput = document.getElementById('apiKey');
-        const runAnalysisButton = document.getElementById('runAnalysisButton');
-        const buttonText = document.getElementById('buttonText');
-        const loader = document.getElementById('loader');
-        const allTradeSignalsContainer = document.getElementById('allTradeSignalsContainer');
-        const errorMessageDiv = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
-        const historyLog = document.getElementById('historyLog');
-        const historyInitialMessage = document.getElementById('historyInitialMessage');
-        const tradeHistoryContainer = document.getElementById('trade-history-container');
-        const historyPlaceholder = document.getElementById('history-placeholder');
-        const summaryWins = document.getElementById('summary-wins');
-        const summaryLosses = document.getElementById('summary-losses');
-        const summaryAccuracy = document.getElementById('summary-accuracy');
-        const accountSizeInput = document.getElementById('accountSize');
-        const riskPctInput = document.getElementById('riskPct');
-        const assetPairInput = document.getElementById('assetPair'); // Added reference
-        
-        // --- UI Toggle Function ---
-        window.toggleSection = function(contentId, iconId) {
-            const content = document.getElementById(contentId);
-            const icon = document.getElementById(iconId);
-            const headerDiv = icon.parentElement;
-            
-            if (content.classList.contains('hidden')) {
-                content.classList.remove('hidden');
-                headerDiv.classList.remove('collapsed');
-            } else {
-                content.classList.add('hidden');
-                headerDiv.classList.add('collapsed');
-            }
-        };
+        // --- HELPER TO GET ELEMENT ---
+        const el = (id) => document.getElementById(id);
 
-        // --- Utility Functions ---
+        // DOM Elements (References will be assigned in onload)
+        let apiKeyInput;
+        let runAnalysisButton;
+
+        window.toggleSection = function(contentId, iconId) {
+            const content = el(contentId);
+            const icon = el(iconId);
+            content.classList.toggle('hidden');
+            icon.parentElement.classList.toggle('collapsed');
+        };
 
         function extractJson(text) {
             let cleanText = text.replace(/```json/g, '').replace(/```/g, '');
@@ -360,18 +255,16 @@
             for (let i = 0; i < maxRetries; i++) {
                 const controller = new AbortController();
                 const id = setTimeout(() => controller.abort(), timeout);
-
                 try {
                     const response = await fetch(url, { ...options, signal: controller.signal });
                     clearTimeout(id); 
-
                     if (!response.ok) {
                         if (response.status === 429 && i < maxRetries - 1) { 
                             await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i))); 
                             continue;
                         } else if (response.status === 400) {
                             const errorBody = await response.json().catch(() => ({error: { message: 'No detailed error body.' }}));
-                            console.error(`API 400 Error:`, errorBody);
+                            // This throw message is critical for the circuit breaker in runBatchAnalysis
                             throw new Error(`HTTP 400: ${errorBody.error?.message || 'Bad Request'}`);
                         }
                         throw new Error(`HTTP error! status: ${response.status}`);
@@ -390,25 +283,22 @@
         }
 
         function showLoader() {
-            runAnalysisButton.disabled = true;
-            buttonText.textContent = 'Checking Full Timeframe Continuity...';
-            loader.classList.remove('hidden');
-            errorMessageDiv.classList.add('hidden');
-            allTradeSignalsContainer.innerHTML = `<p class="text-primary font-semibold col-span-full animate-pulse">Scanning Monthly, Weekly, and Daily candles for assets... Please wait.</p>`;
-            // Ensure signals section is open when running analysis
-            document.getElementById('allTradeSignalsContainer').classList.remove('hidden');
-            document.getElementById('signalsChevron').parentElement.classList.remove('collapsed');
+            el('runAnalysisButton').disabled = true;
+            el('buttonText').textContent = 'Checking Timeframe Continuity...';
+            el('loader').classList.remove('hidden');
+            el('errorMessage').classList.add('hidden');
+            el('resultsArea').innerHTML = ''; // Clear previous results
         }
 
-        function hideLoader(originalText = 'Run Full Continuity Scan') {
-            runAnalysisButton.disabled = false;
-            buttonText.textContent = originalText;
-            loader.classList.add('hidden');
+        function hideLoader(originalText = 'Run Strat Scan') {
+            el('runAnalysisButton').disabled = false;
+            el('buttonText').textContent = originalText;
+            el('loader').classList.add('hidden');
         }
 
         function handleError(message) {
-            errorText.textContent = message;
-            errorMessageDiv.classList.remove('hidden');
+            el('errorText').textContent = message;
+            el('errorMessage').classList.remove('hidden');
             hideLoader();
         }
 
@@ -451,294 +341,7 @@
             return history;
         }
 
-
-        // --- Chart Rendering ---
-        function renderTradeChart(pairId, pairName, historyData, tradeData, precision) {
-            const ctx = document.getElementById(`chart-${pairId}`);
-            if (!ctx) return;
-
-            const labels = historyData.map((_, i) => i);
-            const entry = parseFloat(tradeData.entry);
-            const tp = parseFloat(tradeData.takeProfit);
-            const sl = parseFloat(tradeData.stopLoss);
-             const isLong = tradeData.overallSignal.toUpperCase().includes('LONG');
-            let chartColor = '#f59e0b'; // Neutral
-            if (isLong) chartColor = '#10b981'; // Green
-            else if (tradeData.overallSignal.toUpperCase().includes('SHORT')) chartColor = '#ef4444'; // Red
-
-             if (window[`chartInstance_${pairId}`]) window[`chartInstance_${pairId}`].destroy();
-
-            window[`chartInstance_${pairId}`] = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Price', data: historyData, borderColor: chartColor, borderWidth: 2, pointRadius: 0, tension: 0.2 },
-                        { label: 'Entry', data: Array(historyData.length).fill(entry), borderColor: '#2563eb', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0 },
-                        { label: 'TP', data: Array(historyData.length).fill(tp), borderColor: '#059669', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0 },
-                        { label: 'SL', data: Array(historyData.length).fill(sl), borderColor: '#b91c1c', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0 },
-                    ]
-                },
-                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { beginAtZero: false, ticks: { callback: (v) => v.toFixed(precision) } } } },
-                 animation: { duration: 500 }
-            });
-        }
-        
-        // --- BATCH RUN LOG ---
-        function logAnalysisBatch(results) {
-            const time = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'p-3 rounded-md bg-gray-200 shadow-sm';
-            let resultHtml = `<div class="font-bold text-sm text-secondary border-b border-gray-400 pb-1 mb-1">Batch Run @ ${time} (${results.length} Signals)</div>`;
-            resultHtml += `<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">`;
-            results.forEach(result => {
-                if (result.status === 'fulfilled') {
-                    const { tradeData } = result.value;
-                    let logClass = 'bg-yellow-100 text-yellow-800';
-                    if (tradeData.overallSignal.toUpperCase().includes('LONG')) logClass = 'bg-green-100 text-green-800';
-                    else if (tradeData.overallSignal.toUpperCase().includes('SHORT')) logClass = 'bg-red-100 text-red-800';
-                    
-                    // Show asset and signal
-                    resultHtml += `
-                        <div class="px-2 py-1 rounded-md text-[11px] ${logClass} flex justify-between">
-                            <span class="font-bold">${tradeData.asset}:</span>
-                            <span class="font-semibold">${tradeData.overallSignal.split(' ')[0]}</span>
-                        </div>`;
-                }
-            });
-            resultHtml += `</div>`;
-            logEntry.innerHTML = resultHtml;
-            if (historyInitialMessage) historyInitialMessage.remove(); 
-            historyLog.prepend(logEntry);
-        }
-
-        // --- Trade History & Performance Functions ---
-        function loadTradeHistory() {
-            const storedHistory = localStorage.getItem(TRADE_HISTORY_KEY);
-            if (storedHistory) {
-                tradeHistory = JSON.parse(storedHistory);
-            }
-            renderTradeHistory();
-        }
-        function saveTradeHistory() {
-            localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(tradeHistory));
-        }
-        
-        window.clearHistory = function(e) {
-            e.stopPropagation(); 
-            if (confirm('Are you sure you want to clear all trading history?')) {
-                tradeHistory = [];
-                saveTradeHistory();
-                renderTradeHistory();
-            }
-        }
-
-        function updatePerformanceSummary() {
-            const wins = tradeHistory.filter(t => t.status === 'Win').length;
-            const losses = tradeHistory.filter(t => t.status === 'Loss').length;
-            const totalClosed = wins + losses;
-            const accuracy = totalClosed > 0 ? round((wins / totalClosed) * 100, 1) : 0;
-            summaryWins.textContent = wins;
-            summaryLosses.textContent = losses;
-            summaryAccuracy.textContent = `${accuracy}%`;
-        }
-        function renderTradeHistory() {
-            tradeHistoryContainer.innerHTML = ''; 
-            if (tradeHistory.length === 0) {
-                tradeHistoryContainer.appendChild(historyPlaceholder);
-            } else {
-                tradeHistory.sort((a, b) => b.id - a.id).forEach(trade => {
-                     const item = document.createElement('div');
-                    item.className = 'history-item flex flex-col md:flex-row justify-between items-start md:items-center p-3 border-b border-gray-200';
-                    
-                    let statusBadge = `<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-200 text-gray-700">Pending</span>`;
-                    if (trade.status === 'Win') statusBadge = `<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700">Win</span>`;
-                    else if (trade.status === 'Loss') statusBadge = `<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700">Loss</span>`;
-
-                    let recColor = 'text-accent';
-                    if (trade.tradeData.overallSignal.toUpperCase().includes('LONG')) recColor = 'text-green-600';
-                    else if (trade.tradeData.overallSignal.toUpperCase().includes('SHORT')) recColor = 'text-red-600';
-
-                    item.innerHTML = `
-                        <div class="flex-1 mb-2 md:mb-0">
-                            <div class="flex items-center space-x-3">
-                                <span class="text-lg font-bold ${recColor}">${trade.tradeData.overallSignal} ${trade.tradeData.asset}</span>
-                                ${statusBadge}
-                            </div>
-                            <p class="text-xs text-gray-500 font-mono">
-                                Tracked: ${new Date(trade.id).toLocaleString()}
-                            </p>
-                             <p class="text-xs text-gray-700 font-mono mt-1">
-                                Entry: ${trade.tradeData.entry || 'N/A'} | SL: ${trade.tradeData.stopLoss || 'N/A'} | TP: ${trade.tradeData.takeProfit || 'N/A'}
-                            </p>
-                        </div>
-                        <div class="flex space-x-2 flex-shrink-0">
-                             ${trade.status === 'Pending' ? `
-                                <button onclick="updateTradeStatus(${trade.id}, 'Win')" class="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600 transition">Win</button>
-                                <button onclick="updateTradeStatus(${trade.id}, 'Loss')" class="px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600 transition">Loss</button>
-                            ` : `
-                                <button onclick="updateTradeStatus(${trade.id}, 'Pending')" class="px-3 py-1 text-xs font-medium bg-gray-400 text-white rounded-md hover:bg-gray-500 transition">Reset</button>
-                            `}
-                            <button onclick="deleteTrade(${trade.id})" class="px-3 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition">Delete</button>
-                        </div>
-                    `;
-                    tradeHistoryContainer.appendChild(item);
-                });
-            }
-            updatePerformanceSummary();
-        }
-        
-        window.updateTradeStatus = (id, status) => {
-             const trade = tradeHistory.find(t => t.id === id);
-            if (trade) { trade.status = status; saveTradeHistory(); renderTradeHistory(); }
-        }
-        window.deleteTrade = (id) => {
-             tradeHistory = tradeHistory.filter(t => t.id !== id);
-            saveTradeHistory();
-            renderTradeHistory();
-        }
-
-        function trackTrade(buttonEl) {
-            // Ensure we get the data attribute even if clicking the icon
-            const btn = buttonEl.closest('.track-trade-btn');
-            const tradeData = JSON.parse(decodeURIComponent(btn.dataset.tradeJson));
-            const newTrade = {
-                id: Date.now(),
-                tradeData: tradeData,
-                status: 'Pending'
-            };
-            tradeHistory.push(newTrade);
-            saveTradeHistory();
-            renderTradeHistory();
-            btn.textContent = 'Tracked';
-            btn.disabled = true;
-            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-            btn.classList.add('bg-gray-400', 'cursor-not-allowed');
-        }
-
-        // --- Signal Card Rendering ---
-
-        function createTradeCard(pairId, tradeData, sources) {
-            let recClass = 'bg-yellow-50 border-yellow-300'; 
-            let recTextColor = 'text-accent';
-            let overallSignal = tradeData.overallSignal.toUpperCase();
-
-            if (overallSignal.includes('LONG') || overallSignal.includes('BULL')) {
-                recClass = 'bg-green-50 border-green-300';
-                recTextColor = 'text-green-600';
-            } else if (overallSignal.includes('SHORT') || overallSignal.includes('BEAR')) {
-                recClass = 'bg-red-50 border-red-300';
-                recTextColor = 'text-red-600';
-            }
-            
-            const escapedTradeData = encodeURIComponent(JSON.stringify(tradeData));
-            const showTracking = !overallSignal.includes('NEUTRAL') && !overallSignal.includes('NO TRADE');
-
-            const continuityHtml = `
-                <div class="flex items-center space-x-2 mt-2 mb-2 bg-gray-50 p-1 rounded justify-center text-[10px]">
-                    <span class="font-bold text-gray-500">Continuity:</span>
-                    ${Object.entries(tradeData.continuity).map(([tf, status]) => {
-                        const color = status.includes('Bullish') ? 'text-green-600' : (status.includes('Bearish') ? 'text-red-600' : 'text-gray-400');
-                        const icon = status.includes('Bullish') ? '⬆' : (status.includes('Bearish') ? '⬇' : '•');
-                        return `<span class="font-mono ${color}">${tf}:${icon}</span>`;
-                    }).join(' ')}
-                </div>
-            `;
-            
-            const citationHtml = sources.map((source, index) => `
-                <a href="${source.uri}" target="_blank" class="text-blue-500 hover:text-blue-700 hover:underline text-[10px] truncate block" title="${source.title}">
-                    <span class="font-semibold">Source ${index + 1}:</span> ${source.title}
-                </a>
-            `).join('');
-
-
-            return `
-                <div class="trade-card ${recClass} p-4 rounded-lg shadow-xl flex flex-col h-full">
-                    <div class="flex justify-between items-start mb-2 border-b pb-2">
-                        <h3 class="text-2xl font-bold ${recTextColor}">${tradeData.asset}</h3>
-                    </div>
-                    
-                    <div class="text-center mb-1">
-                         <p class="text-lg font-extrabold ${recTextColor}">${tradeData.overallSignal}</p>
-                    </div>
-
-                    ${continuityHtml}
-
-                    ${showTracking ? `
-                    <div class="grid grid-cols-3 text-center text-xs font-semibold gap-1 mb-3">
-                        <div class="p-1 bg-blue-100 rounded-md">Entry: ${tradeData.entry}</div>
-                        <div class="p-1 bg-green-100 rounded-md">TP: ${tradeData.takeProfit}</div>
-                        <div class="p-1 bg-red-100 rounded-md">SL: ${tradeData.stopLoss}</div>
-                    </div>
-                    <div class="w-full h-40 mb-3 bg-white border border-gray-200 rounded-md p-1">
-                         <!-- Placeholder for chart (implementation skipped for brevity in this fix, but structure is here) -->
-                         <div class="flex items-center justify-center h-full text-gray-400 text-xs">Simulated Chart Placeholder</div>
-                    </div>
-                    ` : `
-                     <div class="w-full h-20 mb-3 bg-gray-100 border border-gray-200 rounded-md p-1 flex items-center justify-center">
-                        <p class="text-gray-500 font-semibold text-xs">Setup does not meet FTFC criteria.</p>
-                    </div>
-                    `}
-                    
-                    <div class="flex-grow">
-                        <div class="space-y-2 text-xs italic">
-                            <p class="text-gray-700"><strong>Strat Analysis:</strong> ${tradeData.stratAnalysis}</p>
-                            <p class="text-gray-700"><strong>Rationale:</strong> ${tradeData.signalRationale}</p>
-                        </div>
-                    </div>
-
-                    ${showTracking ? `
-                    <button 
-                        class="track-trade-btn w-full mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition"
-                        data-trade-json="${escapedTradeData}"
-                    >
-                        Track This Trade
-                    </button>
-                    ` : ''}
-                    
-                    <div class="border-t pt-2 mt-2 space-y-0.5">
-                         <h5 class="text-[10px] font-bold text-gray-500">Grounded Sources:</h5>
-                         ${citationHtml || '<p class="text-[10px] text-gray-400">No sources.</p>'}
-                    </div>
-
-                </div>
-            `;
-        }
-
-        function displayAllTradeSignals(results) {
-            allTradeSignalsContainer.innerHTML = ''; 
-            const successfulResults = [];
-            
-            const accountSize = parseFloat(document.getElementById('accountSize').value) || 10000;
-            const riskPct = parseFloat(document.getElementById('riskPct').value) || 1;
-
-            results.forEach((result, index) => {
-                const pairId = `pair-${index}`;
-                if (result.status === 'fulfilled') {
-                    const { tradeData, sources, pairDefinition } = result.value;
-                    
-                    // Calculate Lot Size if tracking is available
-                    let lotSizeData = { lotSize: '0', maxLoss: '0' };
-                    if (!tradeData.overallSignal.includes('NEUTRAL')) {
-                        lotSizeData = calculateLotSize(accountSize, riskPct, tradeData.entry, tradeData.stopLoss, pairDefinition);
-                    }
-                    
-                    const cardHtml = createTradeCard(pairId, tradeData, sources, lotSizeData);
-                    allTradeSignalsContainer.innerHTML += cardHtml;
-                    successfulResults.push(result);
-                } else {
-                    const pairData = ALL_PAIRS[index] || { pair: 'Custom' };
-                     allTradeSignalsContainer.innerHTML += `
-                        <div class="trade-card bg-red-50 border-red-300 p-4 rounded-lg shadow-xl flex flex-col h-full justify-center items-center">
-                            <h3 class="text-xl font-bold text-red-600">${pairData.pair}</h3>
-                            <p class="text-xs text-red-600 mt-1 text-center">Analysis Failed: ${result.reason?.message || 'Unknown error'}</p>
-                        </div>`;
-                }
-            });
-            logAnalysisBatch(successfulResults);
-        }
-
-        // --- Core API Call ---
+        // --- API FUNCTIONS (DEFINED BEFORE USE) ---
 
         function generatePayload(pair, tfMacro, tfIntermediate, tfExecution) {
              const systemPrompt = `You are a trading signal API backend. You MUST respond with a raw JSON object only. Do not include markdown formatting, code fences, or conversational text.
@@ -789,12 +392,12 @@
         }
 
         async function fetchFundamentalAnalysis(pairDefinition) {
-            const macro = document.getElementById('tfMacro').value;
-            const intermediate = document.getElementById('tfIntermediate').value;
-            const execution = document.getElementById('tfExecution').value;
+            const macro = el('tfMacro').value;
+            const intermediate = el('tfIntermediate').value;
+            const execution = el('tfExecution').value;
 
             const payload = generatePayload(pairDefinition.pair, macro, intermediate, execution);
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${API_MODEL}:generateContent?key=${userApiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${API_MODEL}:generateContent?key=${encodeURIComponent(userApiKey)}`;
             
             const response = await fetchWithRetry(apiUrl, {
                 method: 'POST',
@@ -805,7 +408,6 @@
             const result = await response.json();
             const candidate = result.candidates?.[0];
 
-            // Improved error handling
             if (!candidate || !candidate.content || !candidate.content.parts || !candidate.content.parts[0] || !candidate.content.parts[0].text) {
                 console.error("Gemini API Response Error Dump:", JSON.stringify(result, null, 2));
                 let msg = "Invalid API response structure from Gemini.";
@@ -834,66 +436,264 @@
             return { tradeData, sources, pairDefinition };
         }
 
+        // --- UI RENDERING FUNCTIONS ---
+
+        function renderTradeChart(pairId, pairName, historyData, tradeData, precision) {
+            const ctx = document.getElementById(`chart-${pairId}`);
+            if (!ctx) return;
+            const labels = historyData.map((_, i) => i);
+            const entry = parseFloat(tradeData.entry);
+            const tp = parseFloat(tradeData.takeProfit);
+            const sl = parseFloat(tradeData.stopLoss);
+            const isLong = tradeData.overallSignal.toUpperCase().includes('LONG');
+            let chartColor = '#f59e0b'; 
+            if (isLong) chartColor = '#10b981'; 
+            else if (tradeData.overallSignal.toUpperCase().includes('SHORT')) chartColor = '#ef4444'; 
+            if (window[`chartInstance_${pairId}`]) window[`chartInstance_${pairId}`].destroy();
+            window[`chartInstance_${pairId}`] = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'Price', data: historyData, borderColor: chartColor, borderWidth: 2, pointRadius: 0, tension: 0.2 },
+                        { label: 'Entry', data: Array(historyData.length).fill(entry), borderColor: '#2563eb', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0 },
+                        { label: 'TP', data: Array(historyData.length).fill(tp), borderColor: '#059669', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0 },
+                        { label: 'SL', data: Array(historyData.length).fill(sl), borderColor: '#b91c1c', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0 },
+                    ]
+                },
+                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { beginAtZero: false, ticks: { callback: (v) => v.toFixed(precision) } } } },
+                 animation: { duration: 500 }
+            });
+        }
+        
+        function createTradeCard(pairId, tradeData, sources, lotSizeData) {
+            let recClass = 'bg-yellow-50 border-yellow-300'; 
+            let recTextColor = 'text-accent';
+            let overallSignal = tradeData.overallSignal.toUpperCase();
+
+            if (overallSignal.includes('LONG') || overallSignal.includes('BULL')) {
+                recClass = 'bg-green-50 border-green-300'; recTextColor = 'text-green-600';
+            } else if (overallSignal.includes('SHORT') || overallSignal.includes('BEAR')) {
+                recClass = 'bg-red-50 border-red-300'; recTextColor = 'text-red-600';
+            }
+            
+            const escapedTradeData = encodeURIComponent(JSON.stringify(tradeData));
+            const showTracking = !overallSignal.includes('NEUTRAL') && !overallSignal.includes('NO TRADE');
+
+            const continuityHtml = `
+                <div class="flex items-center space-x-2 mt-2 mb-2 bg-gray-50 p-1 rounded justify-center text-[10px]">
+                    <span class="font-bold text-gray-500">Continuity:</span>
+                    ${Object.entries(tradeData.continuity).map(([tf, status]) => {
+                        const color = status.includes('Bullish') ? 'text-green-600' : (status.includes('Bearish') ? 'text-red-600' : 'text-gray-400');
+                        const icon = status.includes('Bullish') ? '⬆' : (status.includes('Bearish') ? '⬇' : '•');
+                        return `<span class="font-mono ${color}">${tf}:${icon}</span>`;
+                    }).join(' ')}
+                </div>
+            `;
+            
+            const citationHtml = sources.map((source, index) => `
+                <a href="${source.uri}" target="_blank" class="text-blue-500 hover:text-blue-700 hover:underline text-[10px] truncate block" title="${source.title}"><span class="font-semibold">Source ${index + 1}:</span> ${source.title}</a>
+            `).join('');
+
+            return `
+                <div class="trade-card ${recClass} p-4 rounded-lg shadow-xl flex flex-col h-full">
+                    <div class="flex justify-between items-start mb-2 border-b pb-2">
+                        <h3 class="text-2xl font-bold ${recTextColor}">${tradeData.asset}</h3>
+                        <p class="text-sm font-semibold text-gray-700 bg-white px-2 py-1 rounded-full">${tradeData.currentPrice}</p>
+                    </div>
+                    <div class="text-center mb-1">
+                         <p class="text-lg font-extrabold ${recTextColor}">${tradeData.overallSignal}</p>
+                    </div>
+                    ${continuityHtml}
+                    ${showTracking ? `
+                    <div class="grid grid-cols-3 text-center text-xs font-semibold gap-1 mb-3">
+                        <div class="p-1 bg-blue-100 rounded-md">Entry: ${tradeData.entry}</div>
+                        <div class="p-1 bg-green-100 rounded-md">TP: ${tradeData.takeProfit}</div>
+                        <div class="p-1 bg-red-100 rounded-md">SL: ${tradeData.stopLoss}</div>
+                    </div>
+                    <!-- Risk Display -->
+                    <div class="bg-white p-2 rounded border border-gray-200 mb-2 text-xs flex justify-between">
+                        <span>Lots: <strong>${lotSizeData.lotSize}</strong></span>
+                        <span>Risk: <strong>$${lotSizeData.maxLoss}</strong></span>
+                    </div>
+                    <div class="w-full h-40 mb-3 bg-white border border-gray-200 rounded-md p-1">
+                         <canvas id="chart-${pairId}"></canvas>
+                    </div>
+                    ` : `<div class="w-full h-20 mb-3 bg-gray-100 border border-gray-200 rounded-md p-1 flex items-center justify-center"><p class="text-gray-500 font-semibold text-xs">Setup does not meet FTFC criteria.</p></div>`}
+                    <div class="flex-grow">
+                        <div class="space-y-2 text-xs italic">
+                            <p class="text-gray-700"><strong>Strat Analysis:</strong> ${tradeData.stratAnalysis}</p>
+                            <p class="text-gray-700"><strong>Rationale:</strong> ${tradeData.signalRationale}</p>
+                        </div>
+                    </div>
+                    ${showTracking ? `<button class="track-trade-btn w-full mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition" data-trade-json="${escapedTradeData}">Track This Trade</button>` : ''}
+                    <div class="border-t pt-2 mt-2 space-y-0.5">
+                         <h5 class="text-[10px] font-bold text-gray-500">Grounded Sources:</h5>
+                         ${citationHtml || '<p class="text-[10px] text-gray-400">No sources.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- MAIN BATCH RUNNER ---
+
         async function runBatchAnalysis() {
-            userApiKey = apiKeyInput.value.trim(); 
+            userApiKey = el('apiKey').value.trim(); 
             if (!userApiKey) {
                 handleError("Gemini API Key is required. Please enter your key in the control panel.");
                 return;
             }
             
-            // Capture custom pair BEFORE clearing the list
-            const customPairInput = document.getElementById('assetPair').value.trim().toUpperCase();
-            let batchPairs = [...ALL_PAIRS]; // Start with default 10
+            const customPairInput = el('assetPair').value.trim().toUpperCase();
+            let batchPairs = [...ALL_PAIRS]; 
 
             if (customPairInput && customPairInput.length >= 3) {
                 let formattedPair = customPairInput;
-                // Simple slash insertion if missing (e.g. BTCUSD -> BTC/USD)
                 if (!formattedPair.includes('/') && formattedPair.length === 6) {
                      formattedPair = formattedPair.slice(0, 3) + '/' + formattedPair.slice(3);
                 }
-                
-                // Determine precision (2 for JPY/Gold/Crypto, 4 for others)
                 let precision = 4;
                 if (formattedPair.includes('JPY') || formattedPair.includes('XAU') || formattedPair.includes('BTC') || formattedPair.includes('ETH')) {
                     precision = 2;
                 }
-                
-                // Prepend custom pair to the list
                 batchPairs.unshift({ pair: formattedPair, precision: precision, isCustom: true });
             }
 
             showLoader();
             
-            // Update loader text to reflect count
-            document.querySelector('#allTradeSignalsContainer p').textContent = `Scanning Monthly, Weekly, and Daily candles for ${batchPairs.length} assets... Please wait.`;
+            // Get risk inputs safely
+            const accountSize = parseFloat(el('accountSize').value) || 10000;
+            const riskPct = parseFloat(el('riskPct').value) || 1;
 
-            const allResults = [];
+            el('resultsArea').innerHTML = ''; 
             
-            // Loop through the potentially modified batch list
-            for (const pairDef of batchPairs) {
+            let abortBatch = false; // Circuit breaker flag
+
+            for (const [index, pairDef] of batchPairs.entries()) {
+                if (abortBatch) break; // Stop loop if critical error occurred
+
                 try {
-                    buttonText.textContent = `Analyzing (${allResults.length + 1}/${batchPairs.length}): ${pairDef.pair}...`;
                     const result = await fetchFundamentalAnalysis(pairDef);
-                    allResults.push({ status: 'fulfilled', value: result });
+                    
+                    // Render success
+                    const { tradeData, sources, pairDefinition } = result;
+                    const pairId = `pair-${index}`;
+                    
+                    // Calc Risk
+                    let lotSizeData = { lotSize: '0', maxLoss: '0' };
+                    if (!tradeData.overallSignal.includes('NEUTRAL')) {
+                        lotSizeData = calculateLotSize(accountSize, riskPct, tradeData.entry, tradeData.stopLoss, pairDefinition);
+                    }
+                    
+                    const cardHtml = createTradeCard(pairId, tradeData, sources, lotSizeData);
+                    el('resultsArea').insertAdjacentHTML('beforeend', cardHtml);
+                    
+                     if (!tradeData.overallSignal.includes('NEUTRAL')) {
+                        const historyData = generateHistoricalPriceData(tradeData.currentPrice, pairDefinition);
+                        renderTradeChart(pairId, pairDefinition.pair, historyData, tradeData, pairDefinition.precision);
+                    }
+
                 } catch (error) {
                     console.error(`Failed to analyze ${pairDef.pair}:`, error.message);
-                    // Fix: Attach the pair name to the error so it can be displayed properly
-                    if (!error.pair) error.pair = pairDef.pair;
-                    allResults.push({ status: 'rejected', reason: { message: error.message, pair: pairDef.pair } });
+                    
+                    // CRITICAL ERROR CHECK: If API key is bad, stop trying the other 9 pairs
+                    if (error.message.includes('API key') || error.message.includes('400') || error.message.includes('403')) {
+                        abortBatch = true;
+                        handleError(`Critical Error: ${error.message}. Batch halted.`);
+                        break; 
+                    }
+
+                     const html = `
+                        <div class="trade-card bg-red-50 border-red-300 p-4 rounded-lg shadow-xl flex flex-col h-full justify-center items-center mb-4">
+                            <h3 class="text-xl font-bold text-red-600">${pairDef.pair}</h3>
+                            <p class="text-xs text-red-600 mt-1 text-center">Analysis Failed: ${error.message}</p>
+                        </div>`;
+                     el('resultsArea').insertAdjacentHTML('beforeend', html);
                 }
             }
-
-            if (allResults.length > 0) {
-                displayAllTradeSignals(allResults);
-            } else {
-                handleError("No results were returned from the analysis.");
-            }
             
-            hideLoader();
+            if (!abortBatch) hideLoader();
+        }
+
+        // --- Trade History ---
+        function loadTradeHistory() {
+            const storedHistory = localStorage.getItem(TRADE_HISTORY_KEY);
+            if (storedHistory) { tradeHistory = JSON.parse(storedHistory); }
+            renderTradeHistory();
+        }
+        function saveTradeHistory() { localStorage.setItem(TRADE_HISTORY_KEY, JSON.stringify(tradeHistory)); }
+        window.clearHistory = function(e) {
+            e.stopPropagation(); 
+            if (confirm('Are you sure you want to clear all trading history?')) {
+                tradeHistory = []; saveTradeHistory(); renderTradeHistory();
+            }
+        }
+        function updatePerformanceSummary() {
+            const wins = tradeHistory.filter(t => t.status === 'Win').length;
+            const losses = tradeHistory.filter(t => t.status === 'Loss').length;
+            const totalClosed = wins + losses;
+            const accuracy = totalClosed > 0 ? round((wins / totalClosed) * 100, 1) : 0;
+            el('statWins').textContent = wins; 
+            el('statLosses').textContent = losses; 
+            el('statRate').textContent = `${accuracy}%`;
+        }
+        function renderTradeHistory() {
+            const list = el('historyList');
+            list.innerHTML = ''; 
+            if (tradeHistory.length === 0) {
+                list.innerHTML = '<p class="text-center text-xs text-gray-400 py-2">No trades tracked yet.</p>';
+            } else {
+                tradeHistory.sort((a, b) => b.id - a.id).forEach(trade => {
+                     const item = document.createElement('div');
+                    item.className = 'history-item flex flex-col md:flex-row justify-between items-start md:items-center p-3 border-b border-gray-200';
+                    let statusBadge = `<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-gray-200 text-gray-700">Pending</span>`;
+                    if (trade.status === 'Win') statusBadge = `<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-green-100 text-green-700">Win</span>`;
+                    else if (trade.status === 'Loss') statusBadge = `<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-red-100 text-red-700">Loss</span>`;
+                    let recColor = 'text-accent';
+                    if (trade.tradeData.overallSignal.toUpperCase().includes('LONG')) recColor = 'text-green-600';
+                    else if (trade.tradeData.overallSignal.toUpperCase().includes('SHORT')) recColor = 'text-red-600';
+                    item.innerHTML = `
+                        <div class="flex-1 mb-2 md:mb-0">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-lg font-bold ${recColor}">${trade.tradeData.overallSignal} ${trade.tradeData.asset}</span> ${statusBadge}
+                            </div>
+                            <p class="text-xs text-gray-500 font-mono">Tracked: ${new Date(trade.id).toLocaleString()}</p>
+                             <p class="text-xs text-gray-700 font-mono mt-1">Entry: ${trade.tradeData.entry || 'N/A'} | SL: ${trade.tradeData.stopLoss || 'N/A'} | TP: ${trade.tradeData.takeProfit || 'N/A'}</p>
+                        </div>
+                        <div class="flex space-x-2 flex-shrink-0">
+                             ${trade.status === 'Pending' ? `
+                                <button onclick="updateTradeStatus(${trade.id}, 'Win')" class="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600 transition">Win</button>
+                                <button onclick="updateTradeStatus(${trade.id}, 'Loss')" class="px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600 transition">Loss</button>
+                            ` : `
+                                <button onclick="updateTradeStatus(${trade.id}, 'Pending')" class="px-3 py-1 text-xs font-medium bg-gray-400 text-white rounded-md hover:bg-gray-500 transition">Reset</button>
+                            `}
+                            <button onclick="deleteTrade(${trade.id})" class="px-3 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition">Delete</button>
+                        </div>
+                    `;
+                    list.appendChild(item);
+                });
+            }
+            updatePerformanceSummary();
+        }
+        
+        window.updateTradeStatus = (id, status) => { const trade = tradeHistory.find(t => t.id === id); if (trade) { trade.status = status; saveTradeHistory(); renderTradeHistory(); } }
+        window.deleteTrade = (id) => { tradeHistory = tradeHistory.filter(t => t.id !== id); saveTradeHistory(); renderTradeHistory(); }
+        function trackTrade(buttonEl) {
+            const btn = buttonEl.closest('.track-trade-btn');
+            const tradeData = JSON.parse(decodeURIComponent(btn.dataset.tradeJson));
+            const newTrade = { id: Date.now(), tradeData: tradeData, status: 'Pending' };
+            tradeHistory.push(newTrade); saveTradeHistory(); renderTradeHistory();
+            btn.textContent = 'Tracked'; btn.disabled = true;
+            btn.classList.remove('bg-blue-600', 'hover:bg-blue-700'); btn.classList.add('bg-gray-400', 'cursor-not-allowed');
         }
         
         // --- Initialization ---
         window.onload = () => {
+             // Initialize references
+             apiKeyInput = el('apiKey');
+             runAnalysisButton = el('runAnalysisButton');
+             // ... other refs grabbed via el() in functions
+             
              if (typeof __GEMINI_API_KEY__ !== 'undefined' && __GEMINI_API_KEY__) {
                 apiKeyInput.value = __GEMINI_API_KEY__;
             }
@@ -901,22 +701,11 @@
                  runAnalysisButton.disabled = false;
             }
             apiKeyInput.addEventListener('input', (e) => {
-                if (e.target.value.trim()) {
-                    runAnalysisButton.disabled = false;
-                } else {
-                    runAnalysisButton.disabled = true;
-                }
+                runAnalysisButton.disabled = !e.target.value.trim();
             });
-
             loadTradeHistory();
-
-            document.body.addEventListener('click', function(event) {
-                if (event.target.classList.contains('track-trade-btn')) {
-                    trackTrade(event.target);
-                }
-            });
+            window.initIcons && window.initIcons();
         };
-
     </script>
 </body>
 </html>
