@@ -15,7 +15,8 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2990/2990194.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <!-- Replaced Chart.js with Lightweight Charts for Candlesticks (Pinned Version 4.1.1) -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -323,22 +324,64 @@
             return { lotSize: lotSize.toFixed(2), maxLoss: accountRisk.toFixed(2), pipDistance: pipDistance.toFixed(1) };
         }
 
-        function generateHistoricalPriceData(currentPriceStr, pairDef, dataPoints = 50) {
-            const history = [];
-            const currentPrice = parseFloat(currentPriceStr);
+        // --- CHARTING: OHLC Generator with FCR Injection ---
+        function generateOHLCData(currentPriceStr, pairDef, signalType, count = 40) {
+            const data = [];
+            let time = Math.floor(Date.now() / 1000) - (count * 3600); // 1 hour bars
+            let current = parseFloat(currentPriceStr);
             const precision = pairDef.precision;
             const isGold = pairDef.pair === 'XAU/USD';
-            let volatility = isGold ? 10.0 : (pairDef.base * 0.005); 
-            let price = currentPrice;
-            for (let i = dataPoints - 1; i >= 0; i--) {
-                const fluctuation = (Math.random() - 0.5) * (volatility / 25);
-                price = price + fluctuation + ((Math.random() - 0.5) * (volatility / 100));
-                if (price > pairDef.base + volatility) price = pairDef.base + volatility;
-                if (price < pairDef.base - volatility) price = pairDef.base - volatility;
-                history.unshift(round(price, precision));
+            const baseVol = isGold ? 2.0 : (current * 0.001);
+            
+            // Bias determination:
+            let trendBias = 0;
+            if (signalType.includes('LONG')) trendBias = baseVol * 0.1;
+            if (signalType.includes('SHORT')) trendBias = -baseVol * 0.1;
+
+            // Generate backwards from current price
+            let open = current;
+            let close = current;
+            let high = current;
+            let low = current;
+
+            // FCR Candle Index (recent, e.g., 3-5 bars ago)
+            const fcrIndex = count - 5; 
+
+            for (let i = 0; i < count; i++) {
+                // Moving forward in time for array generation
+                // We'll generate a random walk
+                
+                // If this is the "First Candle", create displacement
+                let isFCR = (i === fcrIndex) && !signalType.includes('NEUTRAL');
+                let vol = baseVol;
+                
+                if (isFCR) {
+                    vol = baseVol * 3.0; // High volatility/displacement
+                    if (signalType.includes('LONG')) trendBias = Math.abs(trendBias) * 2;
+                    if (signalType.includes('SHORT')) trendBias = -Math.abs(trendBias) * 2;
+                }
+
+                // Random component
+                let change = (Math.random() - 0.5) * vol + trendBias;
+                
+                close = open + change;
+                high = Math.max(open, close) + (Math.random() * vol * 0.3);
+                low = Math.min(open, close) - (Math.random() * vol * 0.3);
+
+                data.push({
+                    time: time,
+                    open: parseFloat(open.toFixed(precision)),
+                    high: parseFloat(high.toFixed(precision)),
+                    low: parseFloat(low.toFixed(precision)),
+                    close: parseFloat(close.toFixed(precision)),
+                    isFCR: isFCR // Metadata for markers
+                });
+
+                // Next bar opens at current close
+                open = close;
+                time += 3600;
             }
-            history[dataPoints - 1] = currentPrice; 
-            return history;
+            return data;
         }
 
         // --- API FUNCTIONS (DEFINED BEFORE USE) ---
@@ -440,32 +483,78 @@
 
         // --- UI RENDERING FUNCTIONS ---
 
-        function renderTradeChart(pairId, pairName, historyData, tradeData, precision) {
-            const ctx = document.getElementById(`chart-${pairId}`);
-            if (!ctx) return;
-            const labels = historyData.map((_, i) => i);
-            const entry = parseFloat(tradeData.entry);
-            const tp = parseFloat(tradeData.takeProfit);
-            const sl = parseFloat(tradeData.stopLoss);
-            const isLong = tradeData.overallSignal.toUpperCase().includes('LONG');
-            let chartColor = '#f59e0b'; 
-            if (isLong) chartColor = '#10b981'; 
-            else if (tradeData.overallSignal.toUpperCase().includes('SHORT')) chartColor = '#ef4444'; 
-            if (window[`chartInstance_${pairId}`]) window[`chartInstance_${pairId}`].destroy();
-            window[`chartInstance_${pairId}`] = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        { label: 'Price', data: historyData, borderColor: chartColor, borderWidth: 2, pointRadius: 0, tension: 0.2 },
-                        { label: 'Entry', data: Array(historyData.length).fill(entry), borderColor: '#2563eb', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0 },
-                        { label: 'TP', data: Array(historyData.length).fill(tp), borderColor: '#059669', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0 },
-                        { label: 'SL', data: Array(historyData.length).fill(sl), borderColor: '#b91c1c', borderDash: [5, 5], borderWidth: 1.5, pointRadius: 0 },
-                    ]
-                },
-                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { beginAtZero: false, ticks: { callback: (v) => v.toFixed(precision) } } } },
-                 animation: { duration: 500 }
-            });
+        function renderCandlestickChart(pairId, ohlcData, tradeData, precision) {
+            const container = document.getElementById(`chart-container-${pairId}`);
+            if (!container) return;
+
+            // Cleanup previous instance using consistent naming
+            if (window[`lwChart_${pairId}`]) {
+                window[`lwChart_${pairId}`].remove();
+                delete window[`lwChart_${pairId}`];
+            }
+            
+            // Clear innerHTML just in case
+            container.innerHTML = ''; 
+
+            // Create Chart
+            try {
+                const chart = LightweightCharts.createChart(container, {
+                    width: container.clientWidth,
+                    height: 200, // Fixed height for cards
+                    layout: {
+                        background: { type: 'solid', color: 'transparent' },
+                        textColor: '#333',
+                    },
+                    grid: {
+                        vertLines: { visible: false },
+                        horzLines: { color: '#f0f3fa' },
+                    },
+                    rightPriceScale: {
+                        borderVisible: false,
+                    },
+                    timeScale: {
+                        borderVisible: false,
+                        timeVisible: true,
+                    },
+                    crosshair: {
+                        mode: LightweightCharts.CrosshairMode.Normal,
+                    },
+                });
+
+                // Store instance for later cleanup
+                window[`lwChart_${pairId}`] = chart;
+
+                const candleSeries = chart.addCandlestickSeries({
+                    upColor: '#10b981', 
+                    downColor: '#ef4444', 
+                    borderVisible: false, 
+                    wickUpColor: '#10b981', 
+                    wickDownColor: '#ef4444' 
+                });
+
+                // Set Data
+                candleSeries.setData(ohlcData);
+
+                // Add FCR Markers
+                const markers = [];
+                ohlcData.forEach(d => {
+                    if (d.isFCR) {
+                        markers.push({
+                            time: d.time,
+                            position: tradeData.overallSignal.includes('LONG') ? 'belowBar' : 'aboveBar',
+                            color: '#f59e0b',
+                            shape: tradeData.overallSignal.includes('LONG') ? 'arrowUp' : 'arrowDown',
+                            text: 'FCR'
+                        });
+                    }
+                });
+                candleSeries.setMarkers(markers);
+
+                chart.timeScale().fitContent();
+            } catch (err) {
+                console.error("Chart Rendering Error:", err);
+                container.innerHTML = `<div class="flex items-center justify-center h-full text-xs text-red-400">Chart Error</div>`;
+            }
         }
         
         function createTradeCard(pairId, tradeData, sources, lotSizeData) {
@@ -518,8 +607,8 @@
                         <span>Lots: <strong>${lotSizeData.lotSize}</strong></span>
                         <span>Risk: <strong>$${lotSizeData.maxLoss}</strong></span>
                     </div>
-                    <div class="w-full h-40 mb-3 bg-white border border-gray-200 rounded-md p-1">
-                         <canvas id="chart-${pairId}"></canvas>
+                    <div class="w-full h-52 mb-3 bg-white border border-gray-200 rounded-md p-1" id="chart-container-${pairId}">
+                         <!-- Chart injects here -->
                     </div>
                     ` : `<div class="w-full h-20 mb-3 bg-gray-100 border border-gray-200 rounded-md p-1 flex items-center justify-center"><p class="text-gray-500 font-semibold text-xs">Setup does not meet FTFC criteria.</p></div>`}
                     <div class="flex-grow">
@@ -528,7 +617,7 @@
                             <p class="text-gray-700"><strong>Rationale:</strong> ${tradeData.signalRationale}</p>
                         </div>
                     </div>
-                    ${showTracking ? `<button class="track-trade-btn w-full mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition" data-trade-json="${escapedTradeData}">Track This Trade</button>` : ''}
+                    ${showTracking ? `<button onclick="trackTrade(this)" class="track-trade-btn w-full mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition" data-trade-json="${escapedTradeData}">Track This Trade</button>` : ''}
                     <div class="border-t pt-2 mt-2 space-y-0.5">
                          <h5 class="text-[10px] font-bold text-gray-500">Grounded Sources:</h5>
                          ${citationHtml || '<p class="text-[10px] text-gray-400">No sources.</p>'}
@@ -591,8 +680,9 @@
                     el('resultsArea').insertAdjacentHTML('beforeend', cardHtml);
                     
                      if (!tradeData.overallSignal.includes('NEUTRAL')) {
-                        const historyData = generateHistoricalPriceData(tradeData.currentPrice, pairDefinition);
-                        renderTradeChart(pairId, pairDefinition.pair, historyData, tradeData, pairDefinition.precision);
+                        const ohlcData = generateOHLCData(tradeData.currentPrice, pairDefinition, tradeData.overallSignal);
+                        // Delay slighty to ensure DOM is ready
+                        setTimeout(() => renderCandlestickChart(pairId, ohlcData, tradeData, pairDefinition.precision), 100);
                     }
 
                 } catch (error) {
