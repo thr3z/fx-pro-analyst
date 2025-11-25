@@ -353,7 +353,8 @@
             1. Candles: Check Monthly/Weekly/Daily candle colors (Green=Bullish, Red=Bearish).
             2. Continuity: If all 3 align, signal is LONG (Green) or SHORT (Red). If mixed, NEUTRAL.
             3. Consolidation: If Monthly or Weekly is an "Inside Bar", signal is NEUTRAL.
-            4. Entry: If aligned, find H1/H4 entry pattern.
+            4. **First Candle Rule (Displacement):** Identify the first H1 or H4 candle of the current session. A large body with small wicks indicates **Displacement**. If present, weigh this heavily for direction.
+            5. Entry: If aligned, find H1/H4 entry pattern.
 
             **REQUIRED JSON STRUCTURE:**
             {
@@ -375,7 +376,8 @@
             Perform a "The Strat" Timeframe Continuity analysis for **${pair}**.
             1. Find the Real-Time Open and Current Price for the current ${tfMacro}, ${tfIntermediate}, and ${tfExecution} candles.
             2. Check for Inside Bars on ${tfMacro} and ${tfIntermediate}.
-            3. Apply FTFC rules to generate the signal.
+            3. **First Candle Rule:** Check the first candle of the current session for **Displacement** (Large body, small wicks).
+            4. Apply FTFC rules to generate the signal.
             `;
 
             return {
