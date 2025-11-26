@@ -2,8 +2,18 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FX Strat: High-Precision Hybrid FCR</title>
+    
+    <!-- PWA / iOS Web Clip Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="FX Strat">
+    <meta name="theme-color" content="#1f2937">
+    
+    <!-- App Icon (Embedded SVG) -->
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024' style='background-color:%2310b981'%3E%3Cpath d='M128 128h768v768H128z' fill='%2310b981'/%3E%3Cpath d='M288 640l160-288 160 192 128-224' stroke='white' stroke-width='64' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Lightweight Charts for Candlestick visualization -->
     <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
@@ -30,7 +40,9 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         
         body {
-            background-color: #f3f4f6; 
+            background-color: #f3f4f6;
+            /* Prevent bounce scrolling on mobile to feel more like an app */
+            overscroll-behavior-y: none;
         }
         .container-card {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -78,9 +90,29 @@
         .collapsed .chevron-icon {
             transform: rotate(180deg);
         }
+        
+        /* iOS Install Prompt Styles */
+        #ios-install-prompt {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid #e5e7eb;
+            padding: 16px;
+            z-index: 50;
+            box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
+            animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
     </style>
 </head>
-<body class="p-4 md:p-8 font-sans min-h-screen">
+<body class="p-4 md:p-8 font-sans min-h-screen pb-24"> <!-- Added bottom padding for mobile scroll -->
 
     <div class="max-w-7xl mx-auto">
         <header class="text-center mb-8">
@@ -211,11 +243,24 @@
         </div>
     </div>
 
+    <!-- iOS Install Prompt -->
+    <div id="ios-install-prompt" class="hidden">
+        <div class="flex justify-between items-start">
+            <div class="flex-1">
+                <p class="font-bold text-gray-800">Install FX Strat App</p>
+                <p class="text-sm text-gray-600 mt-1">Tap the Share button <span class="inline-block mx-1"><i data-lucide="share" class="w-4 h-4 inline"></i></span> below and select <strong>"Add to Home Screen"</strong>.</p>
+            </div>
+            <button onclick="document.getElementById('ios-install-prompt').style.display='none'" class="text-gray-400 hover:text-gray-600 ml-4">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </div>
+
     <script type="module">
-        import { createIcons, Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle } from 'https://unpkg.com/lucide@latest/dist/esm/lucide.js';
+        import { createIcons, Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, Share, X } from 'https://unpkg.com/lucide@latest/dist/esm/lucide.js';
         
         const iconSet = {
-            Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle
+            Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, Share, X
         };
 
         window.lucide = { 
@@ -240,6 +285,8 @@
             { pair: 'GBP/USD', base: 1.2580, precision: 4 },
             { pair: 'AUD/USD', base: 0.6500, precision: 4 },
             { pair: 'NZD/USD', base: 0.6050, precision: 4 },
+            { pair: 'USD/CAD', base: 1.3600, precision: 4 },
+            { pair: 'USD/CHF', base: 0.9000, precision: 4 },
             { pair: 'EUR/JPY', base: 163.35, precision: 2 },
             { pair: 'XAU/USD', base: 2350.00, precision: 2 },
         ];
@@ -652,15 +699,14 @@
         // --- Core API Call ---
 
         function generatePayload(pair) {
-             const systemPrompt = `You are a specialized trading analysis engine. 
-            **CRITICAL: Output ONLY a valid JSON object. Do not output any conversational text, markdown, or explanations.**
+             const systemPrompt = `You are a trading analysis engine. 
+            **CRITICAL: Output ONLY a valid JSON object.**
 
             **TASK:**
-            Perform a "Hybrid FCR" analysis on the requested asset.
-            1. Analyze Macro/News/DXY (Silently).
-            2. Analyze Technical Structure (Silently).
-            3. Calculate Confidence Score (0-100).
-            4. Construct the final JSON.
+            1. Get the real-time price of ${pair}.
+            2. Perform "Hybrid FCR" analysis (Macro/Technical).
+            3. Calculate Confidence Score.
+            4. Return JSON.
 
             **SCORING LOGIC:**
             - Confidence Base: 50.
@@ -687,7 +733,7 @@
             }`;
 
             const userQuery = `
-            Generate JSON analysis for ${pair}. 
+            Analyze ${pair}. Include current price analysis.
             NO TEXT. NO EXPLANATIONS. JSON ONLY.
             `;
 
@@ -788,6 +834,21 @@
             document.body.addEventListener('click', (event) => {
                 if (event.target.classList.contains('track-trade-btn')) trackTrade(event.target);
             });
+            
+            // Check for iOS
+            const isIos = /iphone|ipad|ipod/.test( window.navigator.userAgent.toLowerCase() );
+            // Check if in browser (not standalone)
+            const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
+            
+            if (isIos && !isInStandaloneMode) {
+                const prompt = document.getElementById('ios-install-prompt');
+                if (prompt) {
+                    // Slight delay to be polite
+                    setTimeout(() => {
+                        prompt.style.display = 'block';
+                    }, 2000);
+                }
+            }
         };
 
         // --- History Logic ---
