@@ -702,9 +702,9 @@
             **CRITICAL: Output ONLY a valid JSON object.**
 
             **TASK:**
-            1. Get the real-time price of ${pair}.
+            1. **MANDATORY:** Use Google Search to find the latest real-time price of ${pair}.
             2. Perform "Hybrid FCR" analysis (Macro/Technical).
-            3. Calculate Confidence Score.
+            3. Calculate Confidence Score based on the price action found.
             4. Return JSON.
 
             **SCORING LOGIC:**
@@ -731,8 +731,10 @@
               "currentPrice": "Number String"
             }`;
 
+            const timestamp = new Date().toISOString();
             const userQuery = `
-            Analyze ${pair}. Include current price analysis.
+            Find the real-time price of ${pair} as of ${timestamp}.
+            Then generate the JSON analysis.
             NO TEXT. NO EXPLANATIONS. JSON ONLY.
             `;
 
