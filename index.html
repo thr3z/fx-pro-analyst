@@ -650,6 +650,50 @@
             `;
         }
 
+        function displayAllTradeSignals(results) {
+            allTradeSignalsContainer.innerHTML = ''; 
+            const successfulResults = [];
+            
+            const accountSize = parseFloat(document.getElementById('accountSize').value) || 10000;
+            const riskPct = parseFloat(document.getElementById('riskPct').value) || 1;
+
+            results.forEach((result, index) => {
+                const pairId = `pair-${index}`;
+                if (result.status === 'fulfilled') {
+                    const { tradeData, sources, pairDefinition } = result.value;
+                    
+                    let lotSizeData = { lotSize: '0', maxLoss: '0' };
+                    // Only calc lots if high confidence
+                    if (!tradeData.overallSignal.includes('NEUTRAL') && (tradeData.confidence || 0) >= 75) {
+                        lotSizeData = calculateLotSize(accountSize, riskPct, tradeData.entry, tradeData.stopLoss, pairDefinition);
+                    }
+                    
+                    const cardHtml = createTradeCard(pairId, tradeData, sources, lotSizeData);
+                    allTradeSignalsContainer.innerHTML += cardHtml;
+                    successfulResults.push(result);
+                    
+                     if (!tradeData.overallSignal.includes('NEUTRAL') && (tradeData.confidence || 0) >= 75) {
+                        const { data, rangeHigh, rangeLow } = generateOHLCData(tradeData.currentPrice, pairDefinition, tradeData.overallSignal);
+                        setTimeout(() => renderCandlestickChart(pairId, data, rangeHigh, rangeLow, tradeData, pairDefinition.precision), 100);
+                    }
+                    // Re-init icons for injected HTML
+                    setTimeout(() => { if (window.lucide && window.lucide.createIcons) window.lucide.createIcons(); }, 50);
+
+                } else {
+                    const pairData = ALL_PAIRS[index] || { pair: 'Custom' };
+                     allTradeSignalsContainer.innerHTML += `
+                        <div class="trade-card bg-red-50 border-red-300 p-4 rounded-lg shadow-xl flex flex-col h-full justify-center items-center">
+                            <h3 class="text-xl font-bold text-red-600">${pairData.pair}</h3>
+                            <p class="text-xs text-red-600 mt-1 text-center">Analysis Failed: ${result.reason?.message || 'Unknown error'}</p>
+                        </div>`;
+                }
+            });
+        }
+        
+        // --- Explicitly attach to window to avoid reference errors in async context ---
+        window.displayAllTradeSignals = displayAllTradeSignals;
+
+
         // --- Core API Call ---
 
         function generatePayload(pair) {
@@ -796,8 +840,19 @@
                  return;
             }
 
-            if (allResults.length > 0) displayAllTradeSignals(allResults);
-            else handleError("No results.");
+            if (allResults.length > 0) {
+                // Ensure displayAllTradeSignals exists before calling
+                if (typeof displayAllTradeSignals === 'function') {
+                    displayAllTradeSignals(allResults);
+                } else if (typeof window.displayAllTradeSignals === 'function') {
+                     window.displayAllTradeSignals(allResults);
+                } else {
+                    console.error("displayAllTradeSignals function is missing!");
+                    handleError("Internal Error: Display function missing.");
+                }
+            } else {
+                handleError("No results.");
+            }
             
             hideLoader();
         }
