@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FX Strat: High-Precision Hybrid FCR</title>
+    <title>FX Strat: SMC Trifecta AI</title>
     
     <!-- PWA / iOS Web Clip Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -116,7 +116,7 @@
     <div class="max-w-7xl mx-auto">
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-secondary">FX Strat & Order Flow AI</h1>
-            <p class="text-lg text-gray-500 mt-2">Strategy: <span class="text-primary font-bold">Smart Hybrid FCR</span> (Correlation + Multi-Factor Validation)</p>
+            <p class="text-lg text-gray-500 mt-2">Strategy: <span class="text-primary font-bold">SMC Trifecta</span> (Macro + Sweep + Order Block)</p>
         </header>
 
         <!-- Configuration & Control Panel -->
@@ -135,15 +135,15 @@
                 <div class="md:col-span-1">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Validation Mode</label>
                     <div class="p-2 bg-blue-50 text-blue-800 rounded text-sm font-bold border border-blue-200">
-                        High Conviction (75%+)
+                        Strict SMC (RTO)
                     </div>
                 </div>
 
                 <!-- Execution Timeframe -->
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Filters</label>
-                    <div class="p-2 bg-gray-100 rounded text-sm text-gray-600 font-mono">
-                        DXY Correlation + News
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Timeframe</label>
+                    <div class="p-2 bg-gray-100 rounded text-sm text-gray-800 font-bold border border-gray-300 font-mono">
+                        15-Minute (M15)
                     </div>
                 </div>
 
@@ -182,10 +182,10 @@
             <!-- Run Button -->
             <div class="mt-6">
                 <button id="runAnalysisButton" onclick="runBatchAnalysis()" class="w-full flex justify-center items-center px-6 py-3 bg-primary text-white font-bold text-lg rounded-lg shadow-md button-primary disabled:opacity-50 h-full">
-                    <span id="buttonText">Run Precision Scan (Correlation + FCR)</span>
+                    <span id="buttonText">Run SMC Trifecta Scan (M15)</span>
                     <div id="loader" class="loader ml-3 hidden"></div>
                 </button>
-                <p class="text-xs text-gray-500 mt-1 text-center">Validates Bias against DXY/News before checking FCR patterns. Filters low-confidence setups.</p>
+                <p class="text-xs text-gray-500 mt-1 text-center">Detects Macro Bias + Liquidity Sweep + Order Block Return (RTO).</p>
             </div>
         </div>
 
@@ -256,10 +256,10 @@
     </div>
 
     <script type="module">
-        import { createIcons, Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, Share, X } from 'https://unpkg.com/lucide@latest/dist/esm/lucide.js';
+        import { createIcons, Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, Share, X, Zap, Target, Clock } from 'https://unpkg.com/lucide@latest/dist/esm/lucide.js';
         
         const iconSet = {
-            Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, Share, X
+            Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, Share, X, Zap, Target, Clock
         };
 
         window.lucide = { 
@@ -365,15 +365,15 @@
 
         function showLoader() {
             runAnalysisButton.disabled = true;
-            buttonText.textContent = 'Validating Correlations & Structure...';
+            buttonText.textContent = 'Scanning: Macro + Sweep + OB...';
             loader.classList.remove('hidden');
             errorMessageDiv.classList.add('hidden');
-            allTradeSignalsContainer.innerHTML = `<p class="text-primary font-semibold col-span-full animate-pulse">Running High-Precision Scan (DXY Check, News Filter, FCR Validation)...</p>`;
+            allTradeSignalsContainer.innerHTML = `<p class="text-primary font-semibold col-span-full animate-pulse">Running SMC Trifecta Scan (Macro Bias -> Stop Hunt -> Order Block)...</p>`;
             document.getElementById('allTradeSignalsContainer').classList.remove('hidden');
             document.getElementById('signalsChevron').parentElement.classList.remove('collapsed');
         }
 
-        function hideLoader(originalText = 'Run Precision Scan (Correlation + FCR)') {
+        function hideLoader(originalText = 'Run SMC Trifecta Scan (M15)') {
             runAnalysisButton.disabled = false;
             buttonText.textContent = originalText;
             loader.classList.add('hidden');
@@ -406,30 +406,26 @@
             return { lotSize: lotSize.toFixed(2), maxLoss: accountRisk.toFixed(2), pipDistance: pipDistance.toFixed(1) };
         }
 
-        // --- MOCK CANDLE GENERATOR (Visualizing FCR) ---
+        // --- MOCK CANDLE GENERATOR (Visualizing FCR/Sweep/OB) ---
         function generateOHLCData(currentPriceStr, pairDef, signalType, count = 35) {
             const data = [];
-            let time = Math.floor(Date.now() / 1000) - (count * 60); // 1 minute bars
+            let time = Math.floor(Date.now() / 1000) - (count * 60); 
             let current = parseFloat(currentPriceStr);
             const precision = pairDef.precision;
             const isGold = pairDef.pair === 'XAU/USD';
-            // Increased volatility so candles are taller and clearer
             const baseVol = isGold ? 6.0 : (current * 0.002); 
             
-            // FCR Logic: We need a range (First 5m) and then a breakout
+            // Sweep Logic Visualization
             let rangeHigh = current + (baseVol * 2);
             let rangeLow = current - (baseVol * 2);
             
             if (signalType.includes('LONG')) {
-                 rangeHigh = current - (baseVol * 4); // Price is currently above range high
-                 rangeLow = current - (baseVol * 8);
+                 // Price swept low then came back up
+                 rangeHigh = current + (baseVol * 2);
+                 rangeLow = current - (baseVol * 1.5); // Current is higher than the sweep low
             } else if (signalType.includes('SHORT')) {
-                 rangeLow = current + (baseVol * 4); // Price is currently below range low
-                 rangeHigh = current + (baseVol * 8);
-            } else {
-                // Neutral - Inside range
-                rangeHigh = current + (baseVol * 3);
-                rangeLow = current - (baseVol * 3);
+                 rangeLow = current - (baseVol * 2); 
+                 rangeHigh = current + (baseVol * 1.5); // Current is lower than sweep high
             }
 
             let open = rangeLow + (rangeHigh - rangeLow)/2;
@@ -440,20 +436,18 @@
             for (let i = 0; i < count; i++) {
                 let vol = baseVol;
                 
-                // Simulate Displacement: Create larger candles near the end if active signal
-                if (!signalType.includes('NEUTRAL') && i > count - 15) {
-                     vol = baseVol * 2.5; // Higher volatility for breakout
+                // Simulate Sweep Candle near the end
+                if (!signalType.includes('NEUTRAL') && i === count - 8) {
+                     vol = baseVol * 3.5; // Huge wick candle
                 }
 
-                // Simulate randomness but adhere to trend if signal exists
                 let change = (Math.random() - 0.5) * vol;
                 
                 // If trending, add bias
-                if (signalType.includes('LONG') && i > 10) change += (vol * 0.4);
-                if (signalType.includes('SHORT') && i > 10) change -= (vol * 0.4);
+                if (signalType.includes('LONG') && i > count - 8) change += (vol * 0.4);
+                if (signalType.includes('SHORT') && i > count - 8) change -= (vol * 0.4);
 
                 close = open + change;
-                // Ensure wicks are visible by adding minimum variance
                 high = Math.max(open, close) + (Math.random() * vol * 0.8);
                 low = Math.min(open, close) - (Math.random() * vol * 0.8);
 
@@ -472,7 +466,6 @@
         }
 
 
-        // --- Chart Rendering with Lightweight Charts ---
         function renderCandlestickChart(pairId, ohlcData, rangeHigh, rangeLow, tradeData, precision) {
             const container = document.getElementById(`chart-container-${pairId}`);
             if (!container) return;
@@ -504,22 +497,21 @@
 
                 candleSeries.setData(ohlcData);
 
-                // Add FCR Range Lines (5-min High/Low)
-                const highLine = chart.addLineSeries({ color: 'rgba(37, 99, 235, 0.5)', lineWidth: 1, lineStyle: 2, title: '5m High' });
+                // Add Liquidity Lines
+                const highLine = chart.addLineSeries({ color: 'rgba(220, 38, 38, 0.4)', lineWidth: 1, lineStyle: 2, title: 'Buyside Liq (High)' });
                 highLine.setData(ohlcData.map(d => ({ time: d.time, value: rangeHigh })));
                 
-                const lowLine = chart.addLineSeries({ color: 'rgba(37, 99, 235, 0.5)', lineWidth: 1, lineStyle: 2, title: '5m Low' });
+                const lowLine = chart.addLineSeries({ color: 'rgba(16, 185, 129, 0.4)', lineWidth: 1, lineStyle: 2, title: 'Sellside Liq (Low)' });
                 lowLine.setData(ohlcData.map(d => ({ time: d.time, value: rangeLow })));
 
-                // Add Markers for Engulfing / Entry
                 if (!tradeData.overallSignal.includes('NEUTRAL')) {
-                    const lastCandle = ohlcData[ohlcData.length - 5]; // Simulate marker slightly in past
+                    const sweepCandle = ohlcData[ohlcData.length - 8]; 
                     candleSeries.setMarkers([{
-                        time: lastCandle.time,
+                        time: sweepCandle.time,
                         position: tradeData.overallSignal.includes('LONG') ? 'belowBar' : 'aboveBar',
                         color: '#f59e0b',
                         shape: tradeData.overallSignal.includes('LONG') ? 'arrowUp' : 'arrowDown',
-                        text: 'Engulfing'
+                        text: 'LIQ SWEEP'
                     }]);
                 }
 
@@ -548,7 +540,6 @@
                  recTextColor = 'text-gray-600';
             }
 
-            // If low confidence, force neutral look unless high
             if (!isHighConfidence) {
                 recClass = 'bg-gray-100 border-gray-300 opacity-90';
                 recTextColor = 'text-gray-600';
@@ -564,25 +555,25 @@
                         <span class="font-bold ${tradeData.macroBias.includes('BULL') ? 'text-green-600' : (tradeData.macroBias.includes('BEAR') ? 'text-red-600' : 'text-yellow-600')}">${tradeData.macroBias}</span>
                     </div>
                     <div class="bg-gray-50 p-1 rounded border text-center">
-                        <span class="block font-bold text-gray-500">Order Flow</span>
+                        <span class="block font-bold text-gray-500">OB Structure</span>
                         <span class="font-bold ${tradeData.orderFlowBias.includes('BULL') ? 'text-green-600' : (tradeData.orderFlowBias.includes('BEAR') ? 'text-red-600' : 'text-yellow-600')}">${tradeData.orderFlowBias}</span>
                     </div>
                 </div>
             `;
 
-            const fcrDetailsHtml = `
-                <div class="flex justify-between items-center mt-2 mb-2 bg-white bg-opacity-60 p-2 rounded border border-gray-200 text-[10px]">
-                    <div class="flex flex-col items-center">
-                        <span class="font-bold text-gray-500">Correlation</span>
-                        <span class="font-mono text-xs ${tradeData.correlation ? 'text-green-600' : 'text-gray-400'}">${tradeData.correlation || '-'}</span>
+            const smcDetailsHtml = `
+                <div class="grid grid-cols-3 gap-1 mt-2 mb-2 bg-white bg-opacity-60 p-2 rounded border border-gray-200 text-[9px] text-center">
+                    <div class="flex flex-col items-center justify-center p-1 ${tradeData.smcConfluence.sweep ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-300'} rounded">
+                        <i data-lucide="zap" width="12" class="mb-1"></i>
+                        <span class="font-bold">SWEEP</span>
                     </div>
-                     <div class="flex flex-col items-center">
-                        <span class="font-bold text-gray-500">Confidence</span>
-                        <span class="font-bold text-xs ${isHighConfidence ? 'text-green-600' : 'text-red-500'}">${confidence}%</span>
+                    <div class="flex flex-col items-center justify-center p-1 ${tradeData.smcConfluence.displacement ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-300'} rounded">
+                        <i data-lucide="trending-up" width="12" class="mb-1"></i>
+                        <span class="font-bold">DISPLACE</span>
                     </div>
-                    <div class="flex flex-col items-center">
-                        <span class="font-bold text-gray-500">FCR Pattern</span>
-                        <span class="font-mono ${tradeData.fcrCheck.break5m ? 'text-green-600' : 'text-gray-400'}">${tradeData.fcrCheck.break5m ? 'Valid' : 'Invalid'}</span>
+                    <div class="flex flex-col items-center justify-center p-1 ${tradeData.smcConfluence.orderBlock ? 'bg-green-100 text-green-700' : 'bg-red-50 text-red-300'} rounded">
+                        <i data-lucide="target" width="12" class="mb-1"></i>
+                        <span class="font-bold">ORDER BLOCK</span>
                     </div>
                 </div>
             `;
@@ -595,9 +586,12 @@
 
             return `
                 <div class="trade-card ${recClass} p-4 rounded-lg shadow-xl flex flex-col h-full relative">
-                    ${!isHighConfidence ? '<div class="absolute top-2 right-2 px-2 py-0.5 bg-gray-200 text-gray-600 text-[10px] rounded font-bold">Low Conviction</div>' : '<div class="absolute top-2 right-2 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] rounded font-bold flex items-center gap-1"><i data-lucide="check-circle" width="10"></i> Verified</div>'}
+                    ${!isHighConfidence ? '<div class="absolute top-2 right-2 px-2 py-0.5 bg-gray-200 text-gray-600 text-[10px] rounded font-bold">Low Conviction</div>' : '<div class="absolute top-2 right-2 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] rounded font-bold flex items-center gap-1"><i data-lucide="zap" width="10"></i> Verified</div>'}
+                    <div class="absolute top-2 left-2 px-1.5 py-0.5 bg-gray-800 text-white text-[9px] rounded font-mono font-bold flex items-center gap-1 opacity-70">
+                        <i data-lucide="clock" width="8"></i> TF: 15m
+                    </div>
                     
-                    <div class="flex justify-between items-start mb-2 border-b pb-2">
+                    <div class="flex justify-between items-start mb-2 border-b pb-2 pt-4">
                         <h3 class="text-2xl font-bold ${recTextColor}">${tradeData.asset}</h3>
                         <p class="text-sm font-semibold text-gray-700 bg-white px-2 py-1 rounded-full">${tradeData.currentPrice}</p>
                     </div>
@@ -607,11 +601,13 @@
                     </div>
 
                     ${biasHtml}
-                    ${fcrDetailsHtml}
+                    ${smcDetailsHtml}
+
+                    <div class="text-center text-xs font-bold text-gray-500 mb-2">Confidence Score: <span class="${isHighConfidence ? 'text-green-600' : 'text-red-500'}">${confidence}%</span></div>
 
                     ${showTracking ? `
                     <div class="grid grid-cols-3 text-center text-xs font-semibold gap-1 mb-3">
-                        <div class="p-1 bg-blue-100 rounded-md">Entry: ${tradeData.entry}</div>
+                        <div class="p-1 bg-blue-100 rounded-md">Entry (OB): ${tradeData.entry}</div>
                         <div class="p-1 bg-green-100 rounded-md">TP (3R): ${tradeData.takeProfit}</div>
                         <div class="p-1 bg-red-100 rounded-md">SL: ${tradeData.stopLoss}</div>
                     </div>
@@ -626,7 +622,7 @@
                     ` : `
                      <div class="w-full h-24 mb-3 bg-white bg-opacity-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center">
                         <p class="text-gray-500 font-bold text-sm mb-1">Trade Inhibited</p>
-                        <p class="text-gray-400 text-xs">Confidence Score (${confidence}%) is below threshold (75%). Validation metrics failed.</p>
+                        <p class="text-gray-400 text-xs">SMC Conditions not met. Waiting for Order Block formation.</p>
                     </div>
                     `}
                     
@@ -641,7 +637,7 @@
                         class="track-trade-btn w-full mt-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition"
                         data-trade-json="${escapedTradeData}"
                     >
-                        Track High-Probability Trade
+                        Track SMC Trade
                     </button>
                     ` : ''}
                     
@@ -654,65 +650,37 @@
             `;
         }
 
-        function displayAllTradeSignals(results) {
-            allTradeSignalsContainer.innerHTML = ''; 
-            const successfulResults = [];
-            
-            const accountSize = parseFloat(document.getElementById('accountSize').value) || 10000;
-            const riskPct = parseFloat(document.getElementById('riskPct').value) || 1;
-
-            results.forEach((result, index) => {
-                const pairId = `pair-${index}`;
-                if (result.status === 'fulfilled') {
-                    const { tradeData, sources, pairDefinition } = result.value;
-                    
-                    let lotSizeData = { lotSize: '0', maxLoss: '0' };
-                    // Only calc lots if high confidence
-                    if (!tradeData.overallSignal.includes('NEUTRAL') && (tradeData.confidence || 0) >= 75) {
-                        lotSizeData = calculateLotSize(accountSize, riskPct, tradeData.entry, tradeData.stopLoss, pairDefinition);
-                    }
-                    
-                    const cardHtml = createTradeCard(pairId, tradeData, sources, lotSizeData);
-                    allTradeSignalsContainer.innerHTML += cardHtml;
-                    successfulResults.push(result);
-                    
-                    // Render Chart if trade is valid AND High Confidence
-                     if (!tradeData.overallSignal.includes('NEUTRAL') && (tradeData.confidence || 0) >= 75) {
-                        const { data, rangeHigh, rangeLow } = generateOHLCData(tradeData.currentPrice, pairDefinition, tradeData.overallSignal);
-                        setTimeout(() => renderCandlestickChart(pairId, data, rangeHigh, rangeLow, tradeData, pairDefinition.precision), 100);
-                    }
-                    // Re-init icons for injected HTML
-                    setTimeout(() => { if (window.lucide && window.lucide.createIcons) window.lucide.createIcons(); }, 50);
-
-                } else {
-                    const pairData = ALL_PAIRS[index] || { pair: 'Custom' };
-                     allTradeSignalsContainer.innerHTML += `
-                        <div class="trade-card bg-red-50 border-red-300 p-4 rounded-lg shadow-xl flex flex-col h-full justify-center items-center">
-                            <h3 class="text-xl font-bold text-red-600">${pairData.pair}</h3>
-                            <p class="text-xs text-red-600 mt-1 text-center">Analysis Failed: ${result.reason?.message || 'Unknown error'}</p>
-                        </div>`;
-                }
-            });
-        }
-
         // --- Core API Call ---
 
         function generatePayload(pair) {
-             const systemPrompt = `You are a trading analysis engine. 
+             const systemPrompt = `You are an elite Smart Money Concepts (SMC) AI.
             **CRITICAL: Output ONLY a valid JSON object.**
 
-            **TASK:**
-            1. **MANDATORY:** Use Google Search to find the latest real-time price of ${pair}.
-            2. Perform "Hybrid FCR" analysis (Macro/Technical).
-            3. Calculate Confidence Score based on the price action found.
-            4. Return JSON.
+            **CORE STRATEGY: SMC TRIFECTA (Macro + Sweep + Order Block)**
+            Do not just buy the trend. You must wait for the RTO (Return to Order Block) setup.
+            **TIME FRAME:** Focus analysis on the **15-Minute (M15)** chart structure.
+            
+            **LOGIC:**
+            1. **Direction:** Determine Macro Bias (Bullish/Bearish).
+            2. **The Trap (Sweep):** Look for a recent Liquidity Sweep of a key High/Low on M15.
+            3. **The Move (Displacement):** Look for a sharp move reversing away from the sweep.
+            4. **The Entry (Order Block):** Identify the Order Block (last candle before the move) created by that displacement.
+            
+            **SIGNAL GENERATION:**
+            - **LONG:** Macro Bullish + Low Swept + Displacement Up + Valid Bullish Order Block found. 
+              - Entry: Buy Limit at OB.
+              - Stop Loss: JUST BELOW the Swing Low (Sweep Low).
+            - **SHORT:** Macro Bearish + High Swept + Displacement Down + Valid Bearish Order Block found. 
+              - Entry: Sell Limit at OB.
+              - Stop Loss: JUST ABOVE the Swing High (Sweep High).
+            
+            **MANDATORY:** Use Google Search to find Real-Time Price.
 
-            **SCORING LOGIC:**
-            - Confidence Base: 50.
-            - +20 if Macro matches Order Flow.
-            - +20 if DXY Correlation confirms.
-            - +10 if News supports.
-            - -50 if Bias conflicts.
+            **SCORING (+100 Total):**
+            - +20 Macro Bias Alignment.
+            - +30 Liquidity Sweep Confirmed.
+            - +20 Displacement Verified.
+            - +30 Valid Order Block Identified.
             - Threshold: < 75 = NEUTRAL.
 
             **JSON SCHEMA (Strictly Follow):**
@@ -723,8 +691,8 @@
               "orderFlowBias": "BULLISH / BEARISH / NEUTRAL",
               "correlation": "Confirmed / Divergence",
               "confidence": Integer (0-100),
-              "fcrCheck": { "break5m": Boolean, "hasFVG": Boolean, "hasEngulfing": Boolean },
-              "signalRationale": "String (Max 20 words summary)",
+              "smcConfluence": { "sweep": Boolean, "displacement": Boolean, "orderBlock": Boolean },
+              "signalRationale": "String (Focus on the specific Order Block identified)",
               "entry": "Number String",
               "stopLoss": "Number String",
               "takeProfit": "Number String",
@@ -733,8 +701,8 @@
 
             const timestamp = new Date().toISOString();
             const userQuery = `
-            Find the real-time price of ${pair} as of ${timestamp}.
-            Then generate the JSON analysis.
+            Analyze ${pair} for SMC TRIFECTA (Macro + Sweep + Order Block) on the M15 Chart as of ${timestamp}.
+            Find real-time price first.
             NO TEXT. NO EXPLANATIONS. JSON ONLY.
             `;
 
@@ -804,21 +772,28 @@
             }
 
             showLoader();
+            buttonText.textContent = 'Scanning all pairs simultaneously...'; 
             
-            const allResults = [];
-            for (const pairDef of batchPairs) {
+            // Parallel Execution: Map each pair to a promise
+            const promises = batchPairs.map(async (pairDef) => {
                 try {
-                    buttonText.textContent = `Validating ${pairDef.pair}...`;
                     const result = await fetchFundamentalAnalysis(pairDef);
-                    allResults.push({ status: 'fulfilled', value: result });
+                    return { status: 'fulfilled', value: result };
                 } catch (error) {
                     if (!error.pair) error.pair = pairDef.pair;
-                    allResults.push({ status: 'rejected', reason: { message: error.message, pair: pairDef.pair } });
-                    if (error.message.includes('API key') || error.message.includes('400')) {
-                         handleError(`Critical Error: ${error.message}`);
-                         break;
-                    }
+                    return { status: 'rejected', reason: { message: error.message, pair: pairDef.pair } };
                 }
+            });
+
+            // Wait for all promises to resolve/reject concurrently
+            const allResults = await Promise.all(promises);
+
+            // Check for critical API key failure
+            const criticalFailure = allResults.find(r => r.status === 'rejected' && r.reason && (r.reason.message.includes('API key') || r.reason.message.includes('400')));
+            if (criticalFailure && allResults.every(r => r.status === 'rejected')) {
+                 handleError(`Critical Error: ${criticalFailure.reason.message}`);
+                 hideLoader();
+                 return;
             }
 
             if (allResults.length > 0) displayAllTradeSignals(allResults);
@@ -838,13 +813,11 @@
             
             // Check for iOS
             const isIos = /iphone|ipad|ipod/.test( window.navigator.userAgent.toLowerCase() );
-            // Check if in browser (not standalone)
             const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator.standalone);
             
             if (isIos && !isInStandaloneMode) {
                 const prompt = document.getElementById('ios-install-prompt');
                 if (prompt) {
-                    // Slight delay to be polite
                     setTimeout(() => {
                         prompt.style.display = 'block';
                     }, 2000);
