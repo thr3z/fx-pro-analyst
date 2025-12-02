@@ -320,6 +320,33 @@
             }
         };
 
+        // --- Utility Functions ---
+        
+        // --- MISSING UI HELPER FUNCTIONS RESTORED ---
+        function showLoader() {
+            runAnalysisButton.disabled = true;
+            buttonText.textContent = 'Scanning: Macro + Sweep + OB...';
+            loader.classList.remove('hidden');
+            errorMessageDiv.classList.add('hidden');
+            allTradeSignalsContainer.innerHTML = `<p class="text-primary font-semibold col-span-full animate-pulse">Running SMC Trifecta Scan (Macro Bias -> Stop Hunt -> Order Block)...</p>`;
+            document.getElementById('allTradeSignalsContainer').classList.remove('hidden');
+            document.getElementById('signalsChevron').parentElement.classList.remove('collapsed');
+        }
+
+        function hideLoader(originalText = 'Run SMC Trifecta Scan (M15)') {
+            runAnalysisButton.disabled = false;
+            buttonText.textContent = originalText;
+            loader.classList.add('hidden');
+        }
+
+        function handleError(message) {
+            errorText.textContent = message;
+            errorMessageDiv.classList.remove('hidden');
+            hideLoader();
+        }
+        // ---------------------------------------------
+
+
         function extractJson(text) {
             let cleanText = text.replace(/```json/g, '').replace(/```/g, '');
             const startIndex = cleanText.indexOf('{');
@@ -363,28 +390,6 @@
             }
         }
 
-        function showLoader() {
-            runAnalysisButton.disabled = true;
-            buttonText.textContent = 'Scanning: Macro + Sweep + OB...';
-            loader.classList.remove('hidden');
-            errorMessageDiv.classList.add('hidden');
-            allTradeSignalsContainer.innerHTML = `<p class="text-primary font-semibold col-span-full animate-pulse">Running SMC Trifecta Scan (Macro Bias -> Stop Hunt -> Order Block)...</p>`;
-            document.getElementById('allTradeSignalsContainer').classList.remove('hidden');
-            document.getElementById('signalsChevron').parentElement.classList.remove('collapsed');
-        }
-
-        function hideLoader(originalText = 'Run SMC Trifecta Scan (M15)') {
-            runAnalysisButton.disabled = false;
-            buttonText.textContent = originalText;
-            loader.classList.add('hidden');
-        }
-
-        function handleError(message) {
-            errorText.textContent = message;
-            errorMessageDiv.classList.remove('hidden');
-            hideLoader();
-        }
-
         const round = (num, dp) => Math.round(num * Math.pow(10, dp)) / Math.pow(10, dp);
         
         function calculatePipDistance(price1, price2, precision) {
@@ -406,7 +411,8 @@
             return { lotSize: lotSize.toFixed(2), maxLoss: accountRisk.toFixed(2), pipDistance: pipDistance.toFixed(1) };
         }
 
-        // --- MOCK CANDLE GENERATOR (Visualizing FCR/Sweep/OB) ---
+        // --- Visualization & UI Functions (Defined BEFORE Usage) ---
+
         function generateOHLCData(currentPriceStr, pairDef, signalType, count = 35) {
             const data = [];
             let time = Math.floor(Date.now() / 1000) - (count * 60); 
@@ -650,6 +656,7 @@
             `;
         }
 
+        // --- Trade Display Function (Defined BEFORE runBatchAnalysis) ---
         function displayAllTradeSignals(results) {
             allTradeSignalsContainer.innerHTML = ''; 
             const successfulResults = [];
@@ -690,7 +697,7 @@
             });
         }
         
-        // --- Explicitly attach to window to avoid reference errors in async context ---
+        // --- Explicitly attach to window for robustness ---
         window.displayAllTradeSignals = displayAllTradeSignals;
 
 
@@ -713,10 +720,10 @@
             **SIGNAL GENERATION:**
             - **LONG:** Macro Bullish + Low Swept + Displacement Up + Valid Bullish Order Block found. 
               - Entry: Buy Limit at OB.
-              - Stop Loss: JUST BELOW the Swing Low (Sweep Low).
+              - Stop Loss: BELOW the Swing Low (Sweep Low) + 5-10 PIPS BUFFER (To avoid wick stop-outs).
             - **SHORT:** Macro Bearish + High Swept + Displacement Down + Valid Bearish Order Block found. 
               - Entry: Sell Limit at OB.
-              - Stop Loss: JUST ABOVE the Swing High (Sweep High).
+              - Stop Loss: ABOVE the Swing High (Sweep High) + 5-10 PIPS BUFFER (To avoid wick stop-outs).
             
             **MANDATORY:** Use Google Search to find Real-Time Price.
 
