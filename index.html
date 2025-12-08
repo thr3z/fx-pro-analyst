@@ -116,7 +116,7 @@
     <div class="max-w-7xl mx-auto">
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-secondary">FX Strat & Order Flow AI</h1>
-            <p class="text-lg text-gray-500 mt-2">Strategy: <span class="text-primary font-bold">SMC Trifecta</span> (Macro + Sweep + Order Block)</p>
+            <p class="text-lg text-gray-500 mt-2">Strategy: <span class="text-primary font-bold">Pro-Trend SMC</span> (H4 Bias + M15 Entry)</p>
         </header>
 
         <!-- Configuration & Control Panel -->
@@ -135,7 +135,7 @@
                 <div class="md:col-span-1">
                     <label class="block text-sm font-medium text-gray-700 mb-1">Validation Mode</label>
                     <div class="p-2 bg-blue-50 text-blue-800 rounded text-sm font-bold border border-blue-200">
-                        Strict SMC (RTO)
+                        Pro-Trend Filter (H4)
                     </div>
                 </div>
 
@@ -182,10 +182,10 @@
             <!-- Run Button -->
             <div class="mt-6">
                 <button id="runAnalysisButton" onclick="runBatchAnalysis()" class="w-full flex justify-center items-center px-6 py-3 bg-primary text-white font-bold text-lg rounded-lg shadow-md button-primary disabled:opacity-50 h-full">
-                    <span id="buttonText">Run SMC Trifecta Scan (M15)</span>
+                    <span id="buttonText">Run Pro-Trend Scan (M15)</span>
                     <div id="loader" class="loader ml-3 hidden"></div>
                 </button>
-                <p class="text-xs text-gray-500 mt-1 text-center">Detects Macro Bias + Liquidity Sweep + Order Block Return (RTO).</p>
+                <p class="text-xs text-gray-500 mt-1 text-center">Strict Filter: Checks H4/H1 Trend first. Ignores Counter-Trend signals.</p>
             </div>
         </div>
 
@@ -256,10 +256,10 @@
     </div>
 
     <script type="module">
-        import { createIcons, Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, Share, X, Zap, Target, Clock } from 'https://unpkg.com/lucide@latest/dist/esm/lucide.js';
+        import { createIcons, Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, Share, X, Zap, Target, Clock, ArrowRight } from 'https://unpkg.com/lucide@latest/dist/esm/lucide.js';
         
         const iconSet = {
-            Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, Share, X, Zap, Target, Clock
+            Play, RefreshCw, XCircle, BarChart, TrendingUp, TrendingDown, ChevronUp, ChevronDown, CheckCircle, AlertTriangle, Share, X, Zap, Target, Clock, ArrowRight
         };
 
         window.lucide = { 
@@ -325,15 +325,15 @@
         // --- MISSING UI HELPER FUNCTIONS RESTORED ---
         function showLoader() {
             runAnalysisButton.disabled = true;
-            buttonText.textContent = 'Scanning: Macro + Sweep + OB...';
+            buttonText.textContent = 'Scanning: H4 Trend + M15 Sweep...';
             loader.classList.remove('hidden');
             errorMessageDiv.classList.add('hidden');
-            allTradeSignalsContainer.innerHTML = `<p class="text-primary font-semibold col-span-full animate-pulse">Running SMC Trifecta Scan (Macro Bias -> Stop Hunt -> Order Block)...</p>`;
+            allTradeSignalsContainer.innerHTML = `<p class="text-primary font-semibold col-span-full animate-pulse">Running Pro-Trend Filter (H4 Bias -> M15 Entry)...</p>`;
             document.getElementById('allTradeSignalsContainer').classList.remove('hidden');
             document.getElementById('signalsChevron').parentElement.classList.remove('collapsed');
         }
 
-        function hideLoader(originalText = 'Run SMC Trifecta Scan (M15)') {
+        function hideLoader(originalText = 'Run Pro-Trend Scan (M15)') {
             runAnalysisButton.disabled = false;
             buttonText.textContent = originalText;
             loader.classList.add('hidden');
@@ -533,7 +533,7 @@
             let recTextColor = 'text-accent';
             let overallSignal = tradeData.overallSignal.toUpperCase();
             const confidence = tradeData.confidence || 50;
-            const isHighConfidence = confidence >= 75;
+            const isHighConfidence = confidence >= 80; // INCREASED THRESHOLD FOR PRO-TREND
 
             if (overallSignal.includes('LONG') || overallSignal.includes('BUY')) {
                 recClass = 'bg-green-50 border-green-300';
@@ -557,7 +557,7 @@
             const biasHtml = `
                 <div class="grid grid-cols-2 gap-2 mb-2 text-[10px]">
                     <div class="bg-gray-50 p-1 rounded border text-center">
-                        <span class="block font-bold text-gray-500">Macro Bias</span>
+                        <span class="block font-bold text-gray-500">H4 Trend</span>
                         <span class="font-bold ${tradeData.macroBias.includes('BULL') ? 'text-green-600' : (tradeData.macroBias.includes('BEAR') ? 'text-red-600' : 'text-yellow-600')}">${tradeData.macroBias}</span>
                     </div>
                     <div class="bg-gray-50 p-1 rounded border text-center">
@@ -592,7 +592,7 @@
 
             return `
                 <div class="trade-card ${recClass} p-4 rounded-lg shadow-xl flex flex-col h-full relative">
-                    ${!isHighConfidence ? '<div class="absolute top-2 right-2 px-2 py-0.5 bg-gray-200 text-gray-600 text-[10px] rounded font-bold">Low Conviction</div>' : '<div class="absolute top-2 right-2 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] rounded font-bold flex items-center gap-1"><i data-lucide="zap" width="10"></i> Verified</div>'}
+                    ${!isHighConfidence ? '<div class="absolute top-2 right-2 px-2 py-0.5 bg-gray-200 text-gray-600 text-[10px] rounded font-bold">Weak Signal</div>' : '<div class="absolute top-2 right-2 px-2 py-0.5 bg-green-100 text-green-700 text-[10px] rounded font-bold flex items-center gap-1"><i data-lucide="zap" width="10"></i> HTF ALIGNED</div>'}
                     <div class="absolute top-2 left-2 px-1.5 py-0.5 bg-gray-800 text-white text-[9px] rounded font-mono font-bold flex items-center gap-1 opacity-70">
                         <i data-lucide="clock" width="8"></i> TF: 15m
                     </div>
@@ -628,7 +628,7 @@
                     ` : `
                      <div class="w-full h-24 mb-3 bg-white bg-opacity-50 border border-gray-200 rounded-md p-4 flex flex-col items-center justify-center text-center">
                         <p class="text-gray-500 font-bold text-sm mb-1">Trade Inhibited</p>
-                        <p class="text-gray-400 text-xs">SMC Conditions not met. Waiting for Order Block formation.</p>
+                        <p class="text-gray-400 text-xs">Signal failed strict H4 Trend Alignment or Confidence Threshold.</p>
                     </div>
                     `}
                     
@@ -671,7 +671,7 @@
                     
                     let lotSizeData = { lotSize: '0', maxLoss: '0' };
                     // Only calc lots if high confidence
-                    if (!tradeData.overallSignal.includes('NEUTRAL') && (tradeData.confidence || 0) >= 75) {
+                    if (!tradeData.overallSignal.includes('NEUTRAL') && (tradeData.confidence || 0) >= 80) { // INCREASED THRESHOLD
                         lotSizeData = calculateLotSize(accountSize, riskPct, tradeData.entry, tradeData.stopLoss, pairDefinition);
                     }
                     
@@ -679,7 +679,7 @@
                     allTradeSignalsContainer.innerHTML += cardHtml;
                     successfulResults.push(result);
                     
-                     if (!tradeData.overallSignal.includes('NEUTRAL') && (tradeData.confidence || 0) >= 75) {
+                     if (!tradeData.overallSignal.includes('NEUTRAL') && (tradeData.confidence || 0) >= 80) {
                         const { data, rangeHigh, rangeLow } = generateOHLCData(tradeData.currentPrice, pairDefinition, tradeData.overallSignal);
                         setTimeout(() => renderCandlestickChart(pairId, data, rangeHigh, rangeLow, tradeData, pairDefinition.precision), 100);
                     }
@@ -707,32 +707,34 @@
              const systemPrompt = `You are an elite Smart Money Concepts (SMC) AI.
             **CRITICAL: Output ONLY a valid JSON object.**
 
-            **CORE STRATEGY: SMC TRIFECTA (Macro + Sweep + Order Block)**
-            Do not just buy the trend. You must wait for the RTO (Return to Order Block) setup.
-            **TIME FRAME:** Focus analysis on the **15-Minute (M15)** chart structure.
+            **STRATEGY UPGRADE: PRO-TREND SMC (H4 Bias + M15 Entry)**
+            We are filtering out low-quality counter-trend trades to increase Win Rate.
             
-            **LOGIC:**
-            1. **Direction:** Determine Macro Bias (Bullish/Bearish).
-            2. **The Trap (Sweep):** Look for a recent Liquidity Sweep of a key High/Low on M15.
-            3. **The Move (Displacement):** Look for a sharp move reversing away from the sweep.
-            4. **The Entry (Order Block):** Identify the Order Block (last candle before the move) created by that displacement.
+            **STEP 0: HTF TREND FILTER (Crucial)**
+            - Analyze the **4-Hour (H4) and 1-Hour (H1)** charts.
+            - IF H4 is BULLISH -> ONLY LOOK FOR LONGS. (Ignore sell signals).
+            - IF H4 is BEARISH -> ONLY LOOK FOR SHORTS. (Ignore buy signals).
+            - IF H4 is SIDEWAYS -> OUTPUT NEUTRAL (No Trade).
+
+            **STEP 1: THE M15 SETUP (Only if HTF aligns)**
+            - **Trap:** Liquidity Sweep of a key High/Low on M15.
+            - **Move:** Displacement (Strong move reversing away).
+            - **Entry:** Order Block (OB) created by that displacement.
             
             **SIGNAL GENERATION:**
-            - **LONG:** Macro Bullish + Low Swept + Displacement Up + Valid Bullish Order Block found. 
-              - Entry: Buy Limit at OB.
-              - Stop Loss: BELOW the Swing Low (Sweep Low) + 5-10 PIPS BUFFER (To avoid wick stop-outs).
-            - **SHORT:** Macro Bearish + High Swept + Displacement Down + Valid Bearish Order Block found. 
-              - Entry: Sell Limit at OB.
-              - Stop Loss: ABOVE the Swing High (Sweep High) + 5-10 PIPS BUFFER (To avoid wick stop-outs).
+            - **LONG:** H4 BULLISH + M15 Low Swept + Displacement Up + Bullish OB. 
+              - Stop Loss: BELOW Sweep Low + 10-15 PIPS BUFFER.
+            - **SHORT:** H4 BEARISH + M15 High Swept + Displacement Down + Bearish OB. 
+              - Stop Loss: ABOVE Sweep High + 10-15 PIPS BUFFER.
             
             **MANDATORY:** Use Google Search to find Real-Time Price.
 
             **SCORING (+100 Total):**
-            - +20 Macro Bias Alignment.
-            - +30 Liquidity Sweep Confirmed.
+            - +40 H4/H1 Trend Alignment (Must be present).
+            - +20 Liquidity Sweep Confirmed.
             - +20 Displacement Verified.
-            - +30 Valid Order Block Identified.
-            - Threshold: < 75 = NEUTRAL.
+            - +20 Valid Order Block Identified.
+            - **Threshold: < 80 = NEUTRAL.** (Strict grading).
 
             **JSON SCHEMA (Strictly Follow):**
             {
@@ -743,7 +745,7 @@
               "correlation": "Confirmed / Divergence",
               "confidence": Integer (0-100),
               "smcConfluence": { "sweep": Boolean, "displacement": Boolean, "orderBlock": Boolean },
-              "signalRationale": "String (Focus on the specific Order Block identified)",
+              "signalRationale": "String (Focus on H4 Trend Alignment + M15 Entry)",
               "entry": "Number String",
               "stopLoss": "Number String",
               "takeProfit": "Number String",
@@ -752,7 +754,7 @@
 
             const timestamp = new Date().toISOString();
             const userQuery = `
-            Analyze ${pair} for SMC TRIFECTA (Macro + Sweep + Order Block) on the M15 Chart as of ${timestamp}.
+            Analyze ${pair} for PRO-TREND SMC (H4 Trend + M15 Entry) as of ${timestamp}.
             Find real-time price first.
             NO TEXT. NO EXPLANATIONS. JSON ONLY.
             `;
