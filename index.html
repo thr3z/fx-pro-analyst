@@ -763,6 +763,9 @@
                 contents: [{ parts: [{ text: userQuery }] }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
                 tools: [{ "google_search": {} }],
+                generationConfig: {
+                    temperature: 0.0
+                },
                 safetySettings: [
                     { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_ONLY_HIGH" },
                     { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_ONLY_HIGH" },
@@ -786,8 +789,11 @@
             const candidate = result.candidates?.[0];
 
             if (!candidate || !candidate.content || !candidate.content.parts || !candidate.content.parts[0] || !candidate.content.parts[0].text) {
+                 if (candidate && candidate.finishReason === 'SAFETY') {
+                     throw new Error("Analysis blocked by safety filters.");
+                }
                 console.error("Gemini API Response Error Dump:", JSON.stringify(result, null, 2));
-                throw new Error("Invalid API response.");
+                throw new Error("Model returned empty response. (Search failed or restricted).");
             }
 
             const text = candidate.content.parts[0].text;
