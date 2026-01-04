@@ -279,6 +279,7 @@
         let tradeHistory = []; 
 
         const ALL_PAIRS = [
+            { pair: 'XAU/USD', base: 2350.00, precision: 2 },
             { pair: 'EUR/USD', base: 1.0850, precision: 4 },
             { pair: 'USD/JPY', base: 150.50, precision: 2 },
             { pair: 'GBP/USD', base: 1.2580, precision: 4 },
@@ -287,7 +288,6 @@
             { pair: 'USD/CAD', base: 1.3600, precision: 4 },
             { pair: 'USD/CHF', base: 0.9000, precision: 4 },
             { pair: 'EUR/JPY', base: 163.35, precision: 2 },
-            { pair: 'XAU/USD', base: 2350.00, precision: 2 },
         ];
 
         const apiKeyInput = document.getElementById('apiKey');
@@ -921,24 +921,34 @@
                     if(t.status === 'Win') wins++; if(t.status === 'Loss') losses++;
                     
                     const item = document.createElement('div');
-                    item.className = 'p-2 border-b flex justify-between items-center text-xs';
+                    item.className = 'p-3 border-b flex justify-between items-center text-xs hover:bg-gray-50 transition-colors';
                     
                     let actionsHtml = '';
                     if (t.status === 'Pending') {
                         actionsHtml = `
-                            <div class="flex space-x-2">
-                                <button onclick="window.updateTradeStatus(${t.id}, 'Win')" class="text-green-600 hover:bg-green-100 p-1 rounded" title="Mark Win">✔</button>
-                                <button onclick="window.updateTradeStatus(${t.id}, 'Loss')" class="text-red-600 hover:bg-red-100 p-1 rounded" title="Mark Loss">✘</button>
+                            <div class="flex space-x-2 ml-4">
+                                <button onclick="window.updateTradeStatus(${t.id}, 'Win')" class="text-green-600 hover:bg-green-100 p-1.5 rounded" title="Mark Win">✔</button>
+                                <button onclick="window.updateTradeStatus(${t.id}, 'Loss')" class="text-red-600 hover:bg-red-100 p-1.5 rounded" title="Mark Loss">✘</button>
                             </div>
                         `;
                     } else {
-                         actionsHtml = `<span class="font-bold ${t.status === 'Win' ? 'text-green-600' : 'text-red-600'}">${t.status}</span>`;
+                         actionsHtml = `<span class="font-bold ml-4 ${t.status === 'Win' ? 'text-green-600' : 'text-red-600'}">${t.status}</span>`;
                     }
+
+                    const signalType = t.tradeData.overallSignal.toUpperCase();
+                    const isBuy = signalType.includes('LONG') || signalType.includes('BUY');
+                    const direction = isBuy ? 'BUY' : 'SELL';
+                    const dirClass = isBuy ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100';
+                    const timestamp = new Date(t.id).toLocaleString();
 
                     item.innerHTML = `
                         <div class="flex flex-col">
-                            <span class="font-bold">${t.tradeData.overallSignal} ${t.tradeData.asset}</span>
-                            <span class="text-[10px] text-gray-500">${new Date(t.id).toLocaleTimeString()}</span>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-extrabold ${dirClass}">${direction}</span>
+                                <span class="font-bold text-gray-800">${t.tradeData.asset}</span>
+                                <span class="text-gray-500">@ ${t.tradeData.entry}</span>
+                            </div>
+                            <span class="text-[10px] text-gray-400 font-mono">${timestamp}</span>
                         </div>
                         ${actionsHtml}
                     `;
